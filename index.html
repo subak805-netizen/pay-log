@@ -226,6 +226,18 @@ select.in{padding-right:24px;-webkit-appearance:none;appearance:none;background-
 .sh-item.danger b{color:var(--red)}
 .sh-item:hover{border-color:var(--ink)}
 .sh-foot{font-size:11.5px;color:var(--t3);margin-top:14px;line-height:1.7}
+.sh-sub{font-size:12px;font-weight:800;color:var(--t2);margin:16px 0 8px}
+.cloud{border:1px solid var(--line2);border-radius:14px;padding:14px;margin-bottom:12px}
+.cloud.on{border-color:var(--ok);background:var(--ok-bg)}
+.cloud b{display:block;font-size:14px;margin-bottom:3px}
+.cloud p{margin:0 0 10px;font-size:12.5px;color:var(--t2);line-height:1.6}
+.cloud .cl-err{color:var(--red);font-weight:700}
+.cloud form{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.cloud .in{width:100%}
+.cpill .cdot{width:7px;height:7px;border-radius:50%;background:var(--t3);display:inline-block}
+.cpill.ok .cdot{background:var(--ok)}
+.cpill.busy .cdot{background:var(--warn)}
+.cpill.err .cdot{background:var(--red)}
 .confirm{border:1.5px solid var(--red);background:var(--red-bg);border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:13px;color:var(--text)}
 .confirm p{margin:0 0 10px}
 .row-btns{display:flex;gap:8px;flex-wrap:wrap}
@@ -319,7 +331,7 @@ select.in{padding-right:24px;-webkit-appearance:none;appearance:none;background-
       <div class="tr">
         <button type="button" class="btn sm hide-m" id="mtoday" data-act="month" data-d="0">이번 달로</button>
         <button type="button" class="btn sm hide-m" data-act="add">+ 새로 적기 <kbd>N</kbd></button>
-        <button type="button" class="btn sm" data-act="sheet" data-v="1">데이터</button>
+        <button type="button" class="btn sm cpill" id="cloudPill" data-act="sheet" data-v="1"><i class="cdot"></i><span id="cloudTxt">로그인</span></button>
       </div>
     </header>
     <div id="view"></div>
@@ -331,7 +343,7 @@ select.in{padding-right:24px;-webkit-appearance:none;appearance:none;background-
 
 <script>
 'use strict';
-var APP_VER='2026.10.13a';
+var APP_VER='2026.10.13b';
 var TABS=['month','loan','fixed','card','inst','settle'];
 var TAB_NAME={month:'이번 달',loan:'대출 · 꿔준 돈',fixed:'고정지출 · 세금',card:'카드값',inst:'할부',settle:'정산'};
 var METHOD={equal:'매달 같은 금액',prin:'원금 똑같이',bullet:'이자만, 끝에 원금'};
@@ -382,6 +394,7 @@ function normalize(d){
   if(d.taxSet)b.taxSet={car:!!d.taxSet.car,house:!!d.taxSet.house,biz:!!d.taxSet.biz};
   if(d.months&&typeof d.months==='object')b.months=d.months;
   if(d.demo)b.demo=true;
+  b._ts=+d._ts||0;
   return b;
 }
 /* 같은 github.io 주소의 다른 앱(FPF 등)과 localStorage 용량을 나눠 쓰지 않도록 전용 IndexedDB 에만 저장 */
@@ -392,14 +405,14 @@ function idbSet(k,v){return idb().then(function(db){return new Promise(function(
 var saveWarned=false,bc=null;
 try{bc=new BroadcastChannel('paylog');}catch(e){}
 function warnSave(){if(!saveWarned){saveWarned=true;toast('이 브라우저에서는 저장이 안 돼요. 데이터 → 백업 파일 저장으로 보관해 주세요.');}}
-function save(){idbSet('state',JSON.stringify(S)).then(function(){if(bc)bc.postMessage('saved');},warnSave);}
+function save(fromCloud){if(!fromCloud)S._ts=Date.now();idbSet('state',JSON.stringify(S)).then(function(){if(bc)bc.postMessage('saved');},warnSave);if(!fromCloud)cloudPush();}
 var S=blank();
 var W={tab:'month',ym:CUR,filter:'all',loanSel:null,schedAll:false,loanForm:false,sheet:false,confirm:null,copyText:null,pendingImport:null};
 var HIST=[], pendingRender=false;
 function snap(){HIST.push(JSON.stringify(S));if(HIST.length>40)HIST.shift();}
 function undo(){if(!HIST.length){toast('되돌릴 게 없어요');return;}S=normalize(JSON.parse(HIST.pop()));save();render();toast('되돌렸어요');}
 function mut(fn,msg){snap();fn();save();render();if(msg)toast(msg,true);}
-function hasData(){return !!(S.loans.length||S.lends.length||S.fixed.length||S.cards.length||S.insts.length||S.sItems.length||Object.keys(S.months).some(function(k){var m=S.months[k];return m&&m.once&&m.once.length;}));}
+function hasData(s){s=s||S;return !!(s.loans.length||s.lends.length||s.fixed.length||s.cards.length||s.insts.length||s.sItems.length||Object.keys(s.months).some(function(k){var m=s.months[k];return m&&m.once&&m.once.length;}));}
 
 /* ── 달별 기록 ── */
 function mo(ym){var m=S.months[ym]||{};return {paid:m.paid||{},amt:m.amt||{},once:m.once||[],got:m.got||{},settled:m.settled||null};}
@@ -518,7 +531,9 @@ function welcome(){
    +'<button type="button" class="wcard" data-act="goto" data-tab="card"><b>카드 추가</b><span>낸 카드값 카드별 기록</span></button>'
    +'<button type="button" class="wcard" data-act="goto" data-tab="settle"><b>정산 항목 적기</b><span>오고가는 돈 매달 정산</span></button>'
    +'</div><div class="chips"><button type="button" class="btn sm" data-act="demo">예시 데이터로 둘러보기</button></div>'
-   +'<p class="small t3" style="margin:14px 0 0">적은 내용은 이 기기 브라우저에만 저장돼요. 폰과 컴퓨터를 같이 쓰려면 데이터 → 백업 파일로 옮겨주세요.</p></div>';
+   +(CLOUD.user?'<p class="small t3" style="margin:14px 0 0">'+esc(CLOUD.user.email||'로그인됨')+'로 로그인했어요. 적는 내용은 클라우드에 자동 저장돼요.</p>'
+     :'<p class="small t2" style="margin:16px 0 8px">로그인하면 폰과 컴퓨터에서 같은 내용을 보고, 기기를 바꿔도 그대로 남아요.</p><div class="chips"><button type="button" class="btn on" data-act="glogin">구글로 로그인</button><button type="button" class="btn" data-act="emailform">이메일로 로그인·가입</button></div>')
+   +'</div>';
 }
 function vMonth(){
   var ym=W.ym; if(!hasData()) return welcome();
@@ -771,14 +786,15 @@ function renderSheet(){
   if(!W.sheet){root.innerHTML='';return;}
   var c=W.confirm,cm='';
   if(c){
-    var msg={reset:'적어둔 내용을 모두 지울까요? 지운 뒤 아래 알림의 되돌리기로 살릴 수 있어요.',demo:'지금 데이터 대신 예시 데이터를 넣을까요? 지금 데이터는 지워져요.',import:'백업 파일 내용으로 바꿀까요? 지금 데이터는 지워져요.'}[c.kind];
-    var yes={reset:'모두 지우기',demo:'예시 넣기',import:'불러오기'}[c.kind];
+    var everywhere=CLOUD.user?' 로그인한 다른 기기에서도 똑같이 바뀌어요.':'';
+    var msg={reset:'적어둔 내용을 모두 지울까요?'+everywhere+' 지운 뒤 아래 알림의 되돌리기로 살릴 수 있어요.',demo:'지금 데이터 대신 예시 데이터를 넣을까요? 지금 데이터는 지워져요.'+everywhere,import:'백업 파일 내용으로 바꿀까요? 지금 데이터는 지워져요.'+everywhere,logout:'로그아웃할까요? 이 기기에 적힌 내용은 그대로 남아요.'}[c.kind];
+    var yes={reset:'모두 지우기',demo:'예시 넣기',import:'불러오기',logout:'로그아웃'}[c.kind];
     cm='<div class="confirm" role="alert"><p>'+msg+'</p><div class="row-btns"><button type="button" class="btn danger-fill" data-act="cyes">'+yes+'</button><button type="button" class="btn" data-act="cno">취소</button></div></div>';
   }
   root.innerHTML='<div class="ov"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sh-t">'
-    +'<div class="sh-hd"><h2 id="sh-t">데이터</h2><button type="button" class="x" data-act="sheet" data-v="0" aria-label="닫기">'+ICON_X+'</button></div>'
-    +'<p class="sh-p">적은 내용은 <b>이 기기 브라우저</b>에만 저장돼요. 폰과 컴퓨터를 같이 쓰려면 한쪽에서 백업 파일을 저장하고 다른 쪽에서 불러오세요.</p>'+cm
-    +'<div class="sh-list">'
+    +'<div class="sh-hd"><h2 id="sh-t">로그인 · 데이터</h2><button type="button" class="x" data-act="sheet" data-v="0" aria-label="닫기">'+ICON_X+'</button></div>'
+    +cloudSection()+cm
+    +'<div class="sh-sub">백업</div><div class="sh-list">'
     +'<button type="button" class="sh-item" data-act="export"><b>백업 파일 저장</b><span>지금 데이터를 파일로 받아요</span></button>'
     +'<button type="button" class="sh-item" data-act="import"><b>백업 불러오기</b><span>저장해 둔 파일로 바꿔요</span></button>'
     +'<button type="button" class="sh-item" data-act="demo"><b>예시 데이터 넣기</b><span>어떻게 보이는지 둘러봐요</span></button>'
@@ -942,9 +958,133 @@ function copySettle(){
 function runConfirm(){
   var c=W.confirm;if(!c)return;W.confirm=null;
   if(c.kind==='demo'){loadDemo();return;}
+  if(c.kind==='logout'){firebase.auth().signOut().then(function(){toast('로그아웃했어요');});renderSheet();return;}
   snap();
   if(c.kind==='reset'){S=blank();W.loanSel=null;W.sheet=false;save();render();toast('모두 지웠어요',true);}
   else if(c.kind==='import'){S=normalize(W.pendingImport);W.pendingImport=null;W.loanSel=null;W.sheet=false;save();render();toast('백업을 불러왔어요',true);}
+}
+
+/* ── 클라우드 저장: 머니·링크 등 다른 개인 앱과 같은 로그인(Firebase fpf-manager 프로젝트), 데이터는 PAY.LOG 전용 문서 ──
+   users/{uid}/data/paylog = {state: JSON 글자, ts}. FPF 업무 데이터와 섞이지 않음. 통째로 저장하고 고친 시각(ts)이 늦은 쪽이 이김.
+   이 기기에서 처음 로그인할 때만 기기 내용과 클라우드 내용을 합침 */
+var FB_CONF={apiKey:"AIzaSyCx84fnTSZl9_eTMaUkts0VCyIx4qrql2I",authDomain:"fpf-manager.firebaseapp.com",projectId:"fpf-manager",storageBucket:"fpf-manager.firebasestorage.app",messagingSenderId:"415966666310",appId:"1:415966666310:web:9c4bb75cd2594cc744b447"};
+var CLOUD={on:false,ready:false,user:null,db:null,unsub:null,timer:null,st:'',at:0,err:''};
+function loadScript(src){return new Promise(function(ok,no){var sc=document.createElement('script');sc.src=src;sc.onload=ok;sc.onerror=no;document.head.appendChild(sc);});}
+function cloudDoc(){return CLOUD.db.collection('users').doc(CLOUD.user.uid).collection('data').doc('paylog');}
+function cloudMsg(e){return e&&e.code==='permission-denied'?'저장 권한이 없어요 (Firestore 규칙)':'인터넷 연결을 확인해 주세요';}
+function cloudInit(){
+  var b='https://www.gstatic.com/firebasejs/10.7.1/';
+  loadScript(b+'firebase-app-compat.js').then(function(){return loadScript(b+'firebase-auth-compat.js');}).then(function(){return loadScript(b+'firebase-firestore-compat.js');}).then(function(){
+    firebase.initializeApp(FB_CONF);CLOUD.db=firebase.firestore();CLOUD.on=true;
+    firebase.auth().getRedirectResult().catch(authErr);
+    firebase.auth().onAuthStateChanged(function(u){var was=CLOUD.user&&CLOUD.user.uid;CLOUD.user=u;CLOUD.ready=true;
+      if(u){W.emailForm=false;cloudStart();}else cloudStop();
+      renderCloud();if(W.sheet)renderSheet();if((was||null)!==(u&&u.uid||null)&&W.tab==='month')render();});
+  }).catch(function(){CLOUD.on=false;CLOUD.ready=true;renderCloud();if(W.sheet)renderSheet();});
+}
+function cloudSet(st,err){CLOUD.st=st;if(st==='saved')CLOUD.at=Date.now();CLOUD.err=err||'';renderCloud();}
+function pushNow(){
+  if(!CLOUD.user)return;clearTimeout(CLOUD.timer);cloudSet('saving');
+  var ts=S._ts||Date.now();
+  cloudDoc().set({state:JSON.stringify(S),ts:ts,ver:APP_VER}).then(function(){cloudSet('saved');},function(e){cloudSet('error',cloudMsg(e));});
+}
+function cloudPush(){if(!CLOUD.user)return;clearTimeout(CLOUD.timer);cloudSet('saving');CLOUD.timer=setTimeout(pushNow,1200);}
+function mergeStates(a,b){
+  var nw=(a._ts||0)>=(b._ts||0)?a:b,od=nw===a?b:a;
+  if(od.demo&&!nw.demo)return nw;
+  if(nw.demo&&!od.demo)return od;
+  var r=JSON.parse(JSON.stringify(nw));
+  ['loans','lends','fixed','cards','insts','sItems'].forEach(function(k){var ids={};r[k].forEach(function(x){ids[x.id]=1;});od[k].forEach(function(x){if(!ids[x.id])r[k].push(JSON.parse(JSON.stringify(x)));});});
+  Object.keys(od.months).forEach(function(ym){
+    var o=od.months[ym]||{},m=r.months[ym]||(r.months[ym]={});
+    ['paid','amt','got'].forEach(function(f){m[f]=Object.assign({},o[f]||{},m[f]||{});});
+    var ids={};m.once=m.once||[];m.once.forEach(function(x){ids[x.id]=1;});(o.once||[]).forEach(function(x){if(!ids[x.id])m.once.push(x);});
+    if(!m.settled&&o.settled)m.settled=o.settled;
+  });
+  return normalize(r);
+}
+function cloudStart(){
+  var uid=CLOUD.user.uid;cloudSet('saving');
+  idbGet('uid').catch(function(){return null;}).then(function(last){
+    var firstHere=!last;
+    if(last&&last!==uid){S=blank();save(true);render();}   // 다른 계정이 쓰던 기기: 그 사람 내용은 그 사람 클라우드에 있으니 이 기기에서만 비움
+    idbSet('uid',uid).catch(function(){});
+    return cloudDoc().get().then(function(doc){
+      var d=doc.exists?doc.data():null,R=null;
+      if(d&&d.state){try{R=normalize(JSON.parse(d.state));R._ts=+d.ts||R._ts||0;}catch(e){}}
+      if(!R){if(hasData(S)){if(!S._ts)S._ts=Date.now();pushNow();}else cloudSet('saved');}
+      else if(firstHere&&hasData(S)&&hasData(R)){S=mergeStates(S,R);S._ts=Date.now();save(true);pushNow();render();toast('이 기기 내용과 클라우드 내용을 합쳤어요');}
+      else if(R._ts>(S._ts||0)||!hasData(S)){S=R;save(true);render();cloudSet('saved');}
+      else if((S._ts||0)>R._ts)pushNow();
+      else cloudSet('saved');
+      cloudListen();
+    });
+  }).catch(function(e){cloudSet('error',cloudMsg(e));});
+}
+function cloudListen(){
+  if(CLOUD.unsub)CLOUD.unsub();
+  CLOUD.unsub=cloudDoc().onSnapshot(function(doc){
+    if(doc.metadata.hasPendingWrites||!doc.exists)return;
+    var d=doc.data();if(!d||!d.state)return;
+    var ts=+d.ts||0;if(ts<=(S._ts||0))return;
+    var R;try{R=normalize(JSON.parse(d.state));}catch(e){return;}
+    R._ts=ts;S=R;save(true);cloudSet('saved');
+    var a=document.activeElement;
+    if(a&&a.matches&&a.matches('input,select,textarea')&&a.closest('#view'))pendingRender=true;else render();
+  },function(e){cloudSet('error',e&&e.code==='permission-denied'?cloudMsg(e):'연결이 끊겼어요');});
+}
+function cloudStop(){if(CLOUD.unsub){CLOUD.unsub();CLOUD.unsub=null;}clearTimeout(CLOUD.timer);CLOUD.st='';}
+function cloudTime(){if(!CLOUD.at)return '';var t=new Date(CLOUD.at);return pad(t.getHours())+':'+pad(t.getMinutes());}
+function renderCloud(){
+  var pill=document.getElementById('cloudPill'),txt=document.getElementById('cloudTxt');
+  if(pill){
+    var u=CLOUD.user,st=CLOUD.st;
+    pill.className='btn sm cpill'+(u?(st==='error'?' err':st==='saving'?' busy':' ok'):'');
+    txt.textContent=!CLOUD.ready?'데이터':!u?'로그인':st==='error'?'저장 실패':st==='saving'?'저장 중':'저장됨';
+  }
+  var line=document.getElementById('cloudLine');
+  if(line)line.innerHTML=cloudLine();
+}
+function cloudLine(){return CLOUD.st==='error'?'<span class="cl-err">저장 실패 · '+esc(CLOUD.err)+'</span>':CLOUD.st==='saving'?'저장 중…':CLOUD.at?'마지막 저장 '+cloudTime():'';}
+function cloudSection(){
+  if(!CLOUD.ready)return '<div class="cloud"><b>클라우드 저장</b><p>연결하는 중…</p></div>';
+  if(!CLOUD.on)return '<div class="cloud"><b>클라우드 저장</b><p>연결하지 못했어요. 인터넷을 확인하고 새로고침해 주세요.</p></div>';
+  if(!CLOUD.user){
+    return '<div class="cloud"><b>로그인하고 클라우드에 저장</b><p>로그인하면 적는 내용이 클라우드에 자동 저장돼서 폰과 컴퓨터에서 같은 내용을 봐요. 기기를 바꾸거나 브라우저 기록을 지워도 그대로 남아요.</p>'
+      +'<div class="row-btns"><button type="button" class="btn on" data-act="glogin">구글로 로그인</button><button type="button" class="btn" data-act="emailform">이메일로 로그인·가입</button></div>'
+      +(W.emailForm?'<form data-form="login" novalidate><input class="in" id="lgEmail" type="email" placeholder="이메일" autocomplete="username" inputmode="email"><input class="in" id="lgPw" type="password" placeholder="비밀번호 (6자 이상)" autocomplete="current-password">'
+        +'<div class="row-btns"><button class="btn save" type="submit" data-mode="in">로그인</button><button class="btn" type="submit" data-mode="new">처음이면 가입</button><button type="button" class="btn sm" data-act="pwreset">비밀번호를 잊었어요</button></div></form>':'')
+      +'</div>';
+  }
+  return '<div class="cloud on"><b>클라우드 저장 켜짐</b><p>'+esc(CLOUD.user.email||'로그인됨')+'<br><span id="cloudLine">'+cloudLine()+'</span></p>'
+    +'<div class="row-btns">'+(CLOUD.st==='error'?'<button type="button" class="btn sm" data-act="cloudretry">다시 연결</button>':'')+'<button type="button" class="btn sm" data-act="logout">로그아웃</button></div></div>';
+}
+function loginGoogle(){
+  if(!CLOUD.on){toast('클라우드에 연결하지 못했어요. 새로고침해 주세요');return;}
+  var pv=new firebase.auth.GoogleAuthProvider();
+  firebase.auth().signInWithPopup(pv).catch(function(e){
+    if(['auth/popup-blocked','auth/operation-not-supported-in-this-environment','auth/web-storage-unsupported'].indexOf(e.code)>=0)firebase.auth().signInWithRedirect(pv);
+    else authErr(e);
+  });
+}
+function emailAuth(mode){
+  var em=(document.getElementById('lgEmail')||{}).value||'',pw=(document.getElementById('lgPw')||{}).value||'';em=em.trim();
+  if(!em||!pw){toast('이메일과 비밀번호를 적어 주세요');return;}
+  var p=mode==='new'?firebase.auth().createUserWithEmailAndPassword(em,pw):firebase.auth().signInWithEmailAndPassword(em,pw);
+  p.then(function(){toast(mode==='new'?'가입했어요 · 클라우드 저장이 켜졌어요':'로그인했어요');},authErr);
+}
+function emailReset(){
+  var em=((document.getElementById('lgEmail')||{}).value||'').trim();if(!em){toast('이메일을 먼저 적어 주세요');return;}
+  firebase.auth().sendPasswordResetEmail(em).then(function(){toast('비밀번호 바꾸는 메일을 보냈어요');},authErr);
+}
+function authErr(e){
+  var c=(e&&e.code)||'';
+  if(c==='auth/popup-closed-by-user'||c==='auth/cancelled-popup-request')return;
+  var M={'auth/invalid-credential':'이메일이나 비밀번호가 틀렸어요','auth/wrong-password':'비밀번호가 틀렸어요','auth/user-not-found':'가입하지 않은 이메일이에요. 「처음이면 가입」을 눌러 주세요',
+    'auth/email-already-in-use':'이미 가입한 이메일이에요. 「로그인」을 눌러 주세요','auth/weak-password':'비밀번호를 6자 이상으로 해 주세요','auth/invalid-email':'이메일 모양이 맞지 않아요',
+    'auth/unauthorized-domain':'이 주소가 Firebase 「승인된 도메인」에 없어요','auth/operation-not-allowed':'Firebase에서 이 로그인 방법이 꺼져 있어요',
+    'auth/network-request-failed':'인터넷 연결을 확인해 주세요','auth/too-many-requests':'시도가 너무 많아요. 잠시 뒤에 다시 해 주세요'};
+  toast(M[c]||('로그인하지 못했어요 · '+(c||'알 수 없는 오류')));
 }
 
 /* ── 이벤트 ── */
@@ -977,6 +1117,11 @@ document.addEventListener('click',function(e){
       case 'reset':W.sheet=true;W.confirm={kind:'reset'};renderSheet();break;
       case 'cyes':runConfirm();break;
       case 'cno':W.confirm=null;renderSheet();break;
+      case 'glogin':loginGoogle();break;
+      case 'emailform':W.sheet=true;W.emailForm=true;renderSheet();var em=document.getElementById('lgEmail');if(em)em.focus();break;
+      case 'pwreset':emailReset();break;
+      case 'logout':W.confirm={kind:'logout'};renderSheet();break;
+      case 'cloudretry':if(CLOUD.user)cloudStart();break;
     }
     return;
   }
@@ -985,7 +1130,9 @@ document.addEventListener('click',function(e){
   if(e.target.closest('input,select,textarea,label,form'))return;
   if(pendingRender)render();
 });
-document.addEventListener('submit',function(e){var f=e.target;if(!f.dataset||!f.dataset.form)return;e.preventDefault();addFrom(f.dataset.form,f);});
+document.addEventListener('submit',function(e){var f=e.target;if(!f.dataset||!f.dataset.form)return;e.preventDefault();
+  if(f.dataset.form==='login'){emailAuth(e.submitter&&e.submitter.dataset.mode==='new'?'new':'in');return;}
+  addFrom(f.dataset.form,f);});
 document.addEventListener('change',function(e){
   var t=e.target;
   if(t.dataset&&t.dataset.chg==='instcard'){var v=t.value,id=t.dataset.id;mut(function(){var it=S.insts.find(function(x){return x.id===id;});if(it)it.cardId=v;});}
@@ -1012,7 +1159,7 @@ if(bc)bc.onmessage=function(){var a=document.activeElement;if(a&&a.matches&&a.ma
 
 document.getElementById('navver').textContent='v '+APP_VER;
 reloadFromDB().then(function(){return idbGet('ui');}).then(function(ui){if(ui&&TABS.indexOf(ui.tab)>=0)W.tab=ui.tab;})
-  .catch(function(){warnSave();}).then(render);
+  .catch(function(){warnSave();}).then(function(){render();cloudInit();});
 </script>
 </body>
 </html>
