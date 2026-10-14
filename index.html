@@ -281,8 +281,6 @@ select.in{padding-right:24px;-webkit-appearance:none;appearance:none;background-
   .stat .v{font-size:19px}
   .grid2,.grid2.even{grid-template-columns:minmax(0,1fr);gap:12px}
   .col,.stack{gap:12px}
-  .hm{display:none}
-  .sm-only{display:inline}
   .tbl{font-size:13px}
   .tbl th,.tbl td{padding-left:7px;padding-right:7px}
   .tbl th:first-child,.tbl td:first-child{padding-left:12px}
@@ -300,6 +298,7 @@ select.in{padding-right:24px;-webkit-appearance:none;appearance:none;background-
   .ov{align-items:flex-end;padding:10px 8px calc(10px + env(safe-area-inset-bottom,0px))}
   .sheet{max-height:calc(100vh - 40px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))}
 }
+@media (max-width:599px){ .hm{display:none} .sm-only{display:inline} }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -343,7 +342,7 @@ select.in{padding-right:24px;-webkit-appearance:none;appearance:none;background-
 
 <script>
 'use strict';
-var APP_VER='2026.10.14b';
+var APP_VER='2026.10.14c';
 var TABS=['month','loan','fixed','card','inst','settle'];
 var TAB_NAME={month:'이번 달',loan:'대출 · 꿔준 돈',fixed:'고정지출 · 세금',card:'카드값',inst:'할부',settle:'정산'};
 var METHOD={equal:'매달 같은 금액',prin:'원금 똑같이',bullet:'이자만, 끝에 원금'};
@@ -698,7 +697,7 @@ function vFixed(){
     var on=fixedOn(f,ym),key='fixed:'+f.id,sp='fixed|'+f.id+'|';
     return '<tr class="'+(!on?'off':(m.paid[key]?'done':''))+'"><td class="w-chk">'+(on?chk(!!m.paid[key],'paid','data-k="'+esc(key)+'"',f.name+' 냄'):'')+'</td>'
       +'<td class="c-name">'+eds(sp+'name|text',f.name,'<span class="nm">'+esc(f.name)+'</span>','이름')
-      +'<div class="sb">'+eds(sp+'from|textopt',f.from||'',f.from?esc(f.from)+'에서'+(cardOf(f.from)?' (카드값에 포함)':''):'<span class="t3">어디서 나가는지 적기</span>','빠져나가는 곳')
+      +'<div class="sb"><span class="sm-only">'+esc(f.cat||'기타')+' · </span>'+eds(sp+'from|textopt',f.from||'',f.from?esc(f.from)+'에서'+(cardOf(f.from)?' (카드값에 포함)':''):'<span class="t3">어디서 나가는지 적기</span>','빠져나가는 곳')
       +(+f.every>1?' · '+(on?'이번 달 낼 차례':'다음 '+eds(sp+'start|ym',fixedNext(f,ym)||'',fixedNext(f,ym)?ymShort(fixedNext(f,ym)):'—','다음 낼 달')):'')+'</div></td>'
       +ed(sp+'cat|text',f.cat||'기타',esc(f.cat||'기타'),'hm t2')
       +ed(sp+'day|day',dayRaw(+f.day||1),dayLabel(+f.day||1),'t2')
@@ -710,7 +709,7 @@ function vFixed(){
   var dl='<datalist id="dl-cat">'+CATS.map(function(c){return '<option value="'+c+'">';}).join('')+'</datalist><datalist id="dl-from">'+fromList().map(function(c){return '<option value="'+esc(c)+'">';}).join('')+'</datalist>';
   var left='<div class="panel"><div class="ph"><span class="t">고정지출 목록</span><span class="small t3">출금일 순 · 체크는 '+mLabel(ym)+' 기준</span></div>'
     +(list.length?'<div class="tw"><table class="tbl"><thead><tr><th></th><th>이름</th><th class="hm">분류</th><th>출금일</th><th class="r">평소 금액</th><th>주기</th><th class="c">변동</th><th></th></tr></thead><tbody>'+tr+'</tbody></table></div>':'<div class="empty"><b>아직 고정지출이 없어요</b>관리비, 통신비, 보험, 구독, 생활비 송금처럼 정해서 나가는 돈을 적어주세요. 2달·3달·1년마다 내는 것도 돼요</div>')
-    +'<form class="addf" data-form="fixed">'+dl+'<input class="in w-name" name="name" placeholder="이름 (예: 관리비)" autocomplete="off"><input class="in w-sm" name="cat" placeholder="분류" list="dl-cat" autocomplete="off"><input class="in w-day" name="day" placeholder="출금일" autocomplete="off"><input class="in w-amt" name="amt" placeholder="금액" inputmode="numeric" autocomplete="off"><input class="in w-sm" name="from" placeholder="빠져나가는 곳 (예: 우리카드)" list="dl-from" autocomplete="off"><select class="in w-sm" name="every" aria-label="주기">'+everyOpts(1)+'</select><input class="in w-cnt" name="first" placeholder="처음 낼 달 (예: 11월)" autocomplete="off"><label class="ck"><input type="checkbox" name="vary"> 변동</label><button class="btn save" type="submit">추가</button></form>'
+    +'<form class="addf" data-form="fixed">'+dl+'<input class="in w-name" name="name" placeholder="이름 (예: 관리비)" autocomplete="off"><input class="in w-sm" name="cat" placeholder="분류" list="dl-cat" autocomplete="off"><input class="in w-day" name="day" placeholder="출금일" autocomplete="off"><input class="in w-amt" name="amt" placeholder="금액" inputmode="numeric" autocomplete="off"><input class="in w-sm" name="from" placeholder="빠져나가는 곳" list="dl-from" autocomplete="off"><select class="in w-sm" name="every" aria-label="주기">'+everyOpts(1)+'</select><input class="in w-cnt" name="first" placeholder="처음 낼 달" autocomplete="off"><label class="ck"><input type="checkbox" name="vary"> 변동</label><button class="btn save" type="submit">추가</button></form>'
     +'<p class="hint">칸을 누르면 바로 고쳐요(Tab으로 다음 칸). 이름 아래를 누르면 빠져나가는 곳(통장·카드)을 적을 수 있어요. 카드값 화면에 등록한 카드 이름을 적으면 그 카드값에 들어 있는 걸로 보고 합계에 두 번 넣지 않아요. 2달마다처럼 띄엄띄엄 내는 건 주기를 고르고 처음 낼 달을 적으면 그 달들에만 나와요(비우면 지금 보는 달부터). 변동은 관리비·전기처럼 달마다 금액이 다른 것. 그 달 금액은 이번 달 화면에서 고치면 평소 금액은 그대로예요.</p></div>';
   var set=[['car','차 있음'],['house','집 있음'],['biz','사업자']].map(function(x){return '<button type="button" class="btn sm '+(S.taxSet[x[0]]?'on':'')+'" data-act="taxset" data-k="'+x[0]+'" aria-pressed="'+(S.taxSet[x[0]]?'true':'false')+'">'+x[1]+'</button>';}).join('');
   var rows=[];for(var i=0;i<12;i++){var y=ymAdd(ym,i);taxesIn(y).forEach(function(t){rows.push({ym:y,t:t,i:i});});}
