@@ -343,7 +343,7 @@ select.in{padding-right:24px;-webkit-appearance:none;appearance:none;background-
 
 <script>
 'use strict';
-var APP_VER='2026.10.13b';
+var APP_VER='2026.10.14a';
 var TABS=['month','loan','fixed','card','inst','settle'];
 var TAB_NAME={month:'이번 달',loan:'대출 · 꿔준 돈',fixed:'고정지출 · 세금',card:'카드값',inst:'할부',settle:'정산'};
 var METHOD={equal:'매달 같은 금액',prin:'원금 똑같이',bullet:'이자만, 끝에 원금'};
@@ -383,6 +383,7 @@ function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2
 function num(s){var n=parseInt(String(s).replace(/[^\d]/g,''),10);return isNaN(n)?NaN:n;}
 function parseDay(s){s=String(s).trim();if(!s)return NaN;if(/말/.test(s))return 31;var n=parseInt(s,10);if(isNaN(n))return NaN;return Math.min(31,Math.max(1,n));}
 function parseYm(s){var m=String(s).match(/(\d{4})\D*(\d{1,2})/);if(!m)return null;var mm=+m[2];if(mm<1||mm>12)return null;return m[1]+'-'+pad(mm);}
+function parseYmLoose(s,base){var y=parseYm(s);if(y)return y;var m=String(s).match(/^\s*(\d{1,2})\s*월?\s*$/);if(!m||+m[1]<1||+m[1]>12)return null;return base.slice(0,4)+'-'+pad(+m[1]);}
 function parseCnt(s){s=String(s).trim();if(!s||/매달|없/.test(s))return {k:0,of:0};var m=s.match(/(\d+)\s*(?:\/\s*(\d+))?/);if(!m)return null;return {k:Math.max(1,+m[1]),of:m[2]?+m[2]:0};}
 
 /* ── 저장 ── */
@@ -441,7 +442,10 @@ function loanState(L,ym){
   rows.forEach(function(r,i){intAll+=r.int;if(i<done)intPaid+=r.int;});
   return {rows:rows,n:n,k:k,inRange:inRange,row:inRange?rows[k-1]:null,paidThis:paidThis,done:done,bal:bal,intPaid:intPaid,intLeft:intAll-intPaid,end:ymAdd(L.start,n-1)};
 }
-function fixedOn(f,ym){return (!f.start||ymDiff(f.start,ym)>=0)&&(!f.end||ymDiff(ym,f.end)>=0);}
+var EVERY={1:'매달',2:'2달마다',3:'3달마다',6:'6달마다',12:'1년마다'};
+function fixedOn(f,ym){var d=f.start?ymDiff(f.start,ym):0;if(d<0)return false;if(f.end&&ymDiff(ym,f.end)<0)return false;return d%Math.max(1,+f.every||1)===0;}
+function fixedNext(f,ym){for(var i=0;i<=24;i++){var y=ymAdd(ym,i);if(fixedOn(f,y))return y;}return null;}
+function everyOpts(sel){return Object.keys(EVERY).map(function(k){return '<option value="'+k+'"'+(+k===(+sel||1)?' selected':'')+'>'+EVERY[k]+'</option>';}).join('');}
 function cardAt(c,ym){
   var rec=mo(ym).amt['card:'+c.id]; if(rec!=null) return {amt:+rec,rec:true};
   for(var i=1;i<=12;i++){var p=ymAdd(ym,-i),v=mo(p).amt['card:'+c.id];if(v!=null)return {amt:+v,rec:false,from:p};}
@@ -491,7 +495,7 @@ function outRows(ym){
   S.loans.forEach(function(L){var s=loanState(L,ym);if(!s.inRange)return;var key='loan:'+L.id;
     rows.push({key:key,kind:'loan',name:L.name+' '+s.k+'회차',cat:'대출',day:+L.day||1,amt:s.row.pay,paid:!!m.paid[key],sub:'원금 '+won(s.row.prin)+' · 이자 '+won(s.row.int)});});
   S.fixed.forEach(function(f){if(!fixedOn(f,ym))return;var key='fixed:'+f.id,ov=m.amt[key],amt=ov!=null?+ov:+f.amt||0;
-    rows.push({key:key,kind:'fixed',name:f.name,cat:f.cat||'고정',day:+f.day||1,amt:amt,paid:!!m.paid[key],vary:!!f.vary,usual:+f.amt||0,ov:ov!=null&&+ov!==+f.amt,spec:'mamt|'+key+'||num',raw:amt});});
+    rows.push({key:key,kind:'fixed',name:f.name,cat:f.cat||'고정',day:+f.day||1,amt:amt,paid:!!m.paid[key],vary:!!f.vary,every:+f.every||1,usual:+f.amt||0,ov:ov!=null&&+ov!==+f.amt,spec:'mamt|'+key+'||num',raw:amt});});
   S.cards.forEach(function(c){var key='card:'+c.id,ca=cardAt(c,ym),ins=instForCard(c.id,ym);
     rows.push({key:key,kind:'card',name:c.name+' 결제',cat:'카드',day:+c.day||1,amt:ca.amt,paid:!!m.paid[key],est:!ca.rec,none:!!ca.none,inst:ins,spec:'mamt|'+key+'||num',raw:ca.rec?ca.amt:''});});
   m.once.forEach(function(o){var key='once:'+o.id;
@@ -551,7 +555,7 @@ function vMonth(){
   var tr=list.map(function(r){
     var st=statusOf(ym,r.day,r.paid),sub='',tag='';
     if(r.kind==='loan')sub=r.sub;
-    if(r.kind==='fixed'){if(r.vary)tag=' <span class="badge warn">변동</span>';if(r.ov)sub='평소 '+won(r.usual)+'원';}
+    if(r.kind==='fixed'){if(r.every>1)tag+=' <span class="badge gray">'+EVERY[r.every]+'</span>';if(r.vary)tag+=' <span class="badge warn">변동</span>';if(r.ov)sub='평소 '+won(r.usual)+'원';}
     if(r.kind==='card'){sub=r.none?'금액을 눌러 적어주세요':(r.est?'예상 · 지난 기록 기준':'');if(r.inst)sub+=(sub?' · ':'')+'할부 '+won(r.inst)+' 포함';}
     if(r.kind==='once'&&r.cat==='세금')tag=' <span class="badge gray">세금</span>';
     var amtTxt=r.kind==='card'&&r.none?'<span class="t3">금액 입력</span>':(r.kind==='card'&&r.est?'<span class="t3">'+won(r.amt)+'</span>':won(r.amt));
@@ -673,24 +677,27 @@ function vFixed(){
   var ym=W.ym,m=mo(ym),list=S.fixed.slice().sort(function(a,b){return (+a.day||0)-(+b.day||0);});
   var sum=0,paid=0,nOn=0,nPaid=0,nVary=0;
   list.forEach(function(f){if(!fixedOn(f,ym))return;var key='fixed:'+f.id,a=m.amt[key]!=null?+m.amt[key]:+f.amt||0;nOn++;sum+=a;if(m.paid[key]){paid+=a;nPaid++;}if(f.vary)nVary++;});
+  var avg=0;list.forEach(function(f){if(!f.start||ymDiff(f.start,ym)>=0)avg+=(+f.amt||0)/Math.max(1,+f.every||1);});
   var thisTax=taxesIn(ym);
-  var h='<div class="stats">'+stat(mLabel(ym)+' 고정지출',won(sum)+'원',nOn+'건','dark')+stat('이번 달 냄',won(paid)+'원',nPaid+'건','','ok')+stat('남음',won(sum-paid)+'원',(nOn-nPaid)+'건','','red')
+  var h='<div class="stats">'+stat(mLabel(ym)+' 고정지출',won(sum)+'원',nOn+'건 · 한 달 평균 '+won(avg)+'원','dark')+stat('이번 달 냄',won(paid)+'원',nPaid+'건','','ok')+stat('남음',won(sum-paid)+'원',(nOn-nPaid)+'건','','red')
     +stat('이번 달 세금',thisTax.length?esc(thisTax[0].name):'없음',thisTax.length?(thisTax.length>1?'외 '+(thisTax.length-1)+'건 · ':'')+'이번 달 화면에서 금액 적기':'세금 달력은 오른쪽','','txt')+'</div>';
   var tr=list.map(function(f){
     var on=fixedOn(f,ym),key='fixed:'+f.id,sp='fixed|'+f.id+'|';
     return '<tr class="'+(!on?'off':(m.paid[key]?'done':''))+'"><td class="w-chk">'+(on?chk(!!m.paid[key],'paid','data-k="'+esc(key)+'"',f.name+' 냄'):'')+'</td>'
-      +ed(sp+'name|text',f.name,'<span class="nm">'+esc(f.name)+'</span>','c-name')
+      +'<td class="c-name">'+eds(sp+'name|text',f.name,'<span class="nm">'+esc(f.name)+'</span>','이름')
+      +(+f.every>1?'<div class="sb">'+(on?'이번 달 낼 차례':'다음 '+eds(sp+'start|ym',fixedNext(f,ym)||'',fixedNext(f,ym)?ymShort(fixedNext(f,ym)):'—','다음 낼 달'))+'</div>':'')+'</td>'
       +ed(sp+'cat|text',f.cat||'기타',esc(f.cat||'기타'),'hm t2')
       +ed(sp+'day|day',dayRaw(+f.day||1),dayLabel(+f.day||1),'t2')
       +ed(sp+'amt|num',f.amt,won(f.amt),'r amt')
+      +'<td><select class="cellsel" data-chg="fixedevery" data-id="'+esc(f.id)+'" aria-label="주기">'+everyOpts(f.every)+'</select></td>'
       +'<td class="c"><button type="button" class="tgl '+(f.vary?'on':'')+'" data-act="vary" data-id="'+esc(f.id)+'" aria-pressed="'+(f.vary?'true':'false')+'">변동</button></td>'
       +'<td class="r">'+del('fixed',f.id,f.name)+'</td></tr>';
   }).join('');
   var dl='<datalist id="dl-cat">'+CATS.map(function(c){return '<option value="'+c+'">';}).join('')+'</datalist>';
   var left='<div class="panel"><div class="ph"><span class="t">고정지출 목록</span><span class="small t3">출금일 순 · 체크는 '+mLabel(ym)+' 기준</span></div>'
-    +(list.length?'<div class="tw"><table class="tbl"><thead><tr><th></th><th>이름</th><th class="hm">분류</th><th>출금일</th><th class="r">평소 금액</th><th class="c">변동</th><th></th></tr></thead><tbody>'+tr+'</tbody></table></div>':'<div class="empty"><b>아직 고정지출이 없어요</b>관리비, 통신비, 보험, 구독, 생활비 송금처럼 매달 나가는 돈을 적어주세요</div>')
-    +'<form class="addf" data-form="fixed">'+dl+'<input class="in w-name" name="name" placeholder="이름 (예: 관리비)" autocomplete="off"><input class="in w-sm" name="cat" placeholder="분류" list="dl-cat" autocomplete="off"><input class="in w-day" name="day" placeholder="출금일" autocomplete="off"><input class="in w-amt" name="amt" placeholder="금액" inputmode="numeric" autocomplete="off"><label class="ck"><input type="checkbox" name="vary"> 변동</label><button class="btn save" type="submit">추가</button></form>'
-    +'<p class="hint">칸을 누르면 바로 고쳐요(Tab으로 다음 칸). 변동은 관리비·전기처럼 달마다 금액이 다른 것. 그 달 금액은 이번 달 화면에서 고치면 평소 금액은 그대로예요.</p></div>';
+    +(list.length?'<div class="tw"><table class="tbl"><thead><tr><th></th><th>이름</th><th class="hm">분류</th><th>출금일</th><th class="r">평소 금액</th><th>주기</th><th class="c">변동</th><th></th></tr></thead><tbody>'+tr+'</tbody></table></div>':'<div class="empty"><b>아직 고정지출이 없어요</b>관리비, 통신비, 보험, 구독, 생활비 송금처럼 정해서 나가는 돈을 적어주세요. 2달·3달·1년마다 내는 것도 돼요</div>')
+    +'<form class="addf" data-form="fixed">'+dl+'<input class="in w-name" name="name" placeholder="이름 (예: 관리비)" autocomplete="off"><input class="in w-sm" name="cat" placeholder="분류" list="dl-cat" autocomplete="off"><input class="in w-day" name="day" placeholder="출금일" autocomplete="off"><input class="in w-amt" name="amt" placeholder="금액" inputmode="numeric" autocomplete="off"><select class="in w-sm" name="every" aria-label="주기">'+everyOpts(1)+'</select><input class="in w-cnt" name="first" placeholder="처음 낼 달 (예: 11월)" autocomplete="off"><label class="ck"><input type="checkbox" name="vary"> 변동</label><button class="btn save" type="submit">추가</button></form>'
+    +'<p class="hint">칸을 누르면 바로 고쳐요(Tab으로 다음 칸). 2달마다처럼 띄엄띄엄 내는 건 주기를 고르고 처음 낼 달을 적으면 그 달들에만 나와요(비우면 지금 보는 달부터). 변동은 관리비·전기처럼 달마다 금액이 다른 것. 그 달 금액은 이번 달 화면에서 고치면 평소 금액은 그대로예요.</p></div>';
   var set=[['car','차 있음'],['house','집 있음'],['biz','사업자']].map(function(x){return '<button type="button" class="btn sm '+(S.taxSet[x[0]]?'on':'')+'" data-act="taxset" data-k="'+x[0]+'" aria-pressed="'+(S.taxSet[x[0]]?'true':'false')+'">'+x[1]+'</button>';}).join('');
   var rows=[];for(var i=0;i<12;i++){var y=ymAdd(ym,i);taxesIn(y).forEach(function(t){rows.push({ym:y,t:t,i:i});});}
   var taxT=rows.map(function(x){var b=x.i===0?'<span class="badge due">이번 달</span>':x.i===1?'<span class="badge warn">다음 달</span>':'<span class="badge gray">'+mLabel(x.ym)+'</span>';
@@ -862,7 +869,7 @@ function applyEdit(spec,v){
   if(type==='num'){if(v===''&&coll==='mamt')parsed=null;else{parsed=num(v);if(isNaN(parsed)){toast('숫자로 적어주세요');return false;}if((field==='n'||field==='per')&&parsed<1){toast('1 이상으로 적어주세요');return false;}}}
   else if(type==='rate'){parsed=parseFloat(v.replace(/[^\d.]/g,''));if(isNaN(parsed)){toast('이율을 숫자로 적어주세요');return false;}}
   else if(type==='day'){parsed=parseDay(v);if(isNaN(parsed)){toast('날짜는 1~31 또는 말일로 적어주세요');return false;}}
-  else if(type==='ym'){parsed=parseYm(v);if(!parsed){toast('2026-03처럼 적어주세요');return false;}}
+  else if(type==='ym'){parsed=parseYmLoose(v,W.ym);if(!parsed){toast('11월이나 2026-11처럼 적어주세요');return false;}}
   else if(type==='cnt'){parsed=parseCnt(v);if(!parsed){toast('5/12처럼 적어주세요');return false;}if(coll==='insts'&&!parsed.k){toast('몇 회차인지 적어주세요');return false;}}
   else if(type==='textopt'){parsed=v;}
   else{if(!v){toast('비워둘 수 없어요');return false;}parsed=v;}
@@ -915,8 +922,8 @@ function addFrom(kind,f){
   var g=function(n){var el=f.elements[n];return el?String(el.value).trim():'';},id=uid(),ym=W.ym;
   var bad=function(msg){toast(msg||'숫자를 확인해 주세요');return false;};
   var after=kind;
-  if(kind==='fixed'){if(!req(f,['name','day','amt']))return;var amt=num(g('amt')),day=parseDay(g('day'));if(isNaN(amt)||isNaN(day))return bad();
-    mut(function(){S.fixed.push({id:id,name:g('name'),cat:g('cat')||'기타',day:day,amt:amt,vary:!!(f.elements.vary&&f.elements.vary.checked),start:ym});},'"'+g('name')+'" 추가했어요');}
+  if(kind==='fixed'){if(!req(f,['name','day','amt']))return;var amt=num(g('amt')),day=parseDay(g('day')),every=Math.max(1,+g('every')||1),first=g('first')?parseYmLoose(g('first'),ym):ym;if(isNaN(amt)||isNaN(day))return bad();if(!first)return bad('처음 낼 달은 11월이나 2026-11처럼 적어주세요');
+    mut(function(){S.fixed.push({id:id,name:g('name'),cat:g('cat')||'기타',day:day,amt:amt,every:every,vary:!!(f.elements.vary&&f.elements.vary.checked),start:first});},'"'+g('name')+'" 추가했어요'+(every>1?' · '+EVERY[every]+' '+mLabel(first)+'부터':''));}
   else if(kind==='once'||kind==='tax'){if(!req(f,kind==='tax'?['amt']:['name','day','amt']))return;var a=num(g('amt')),d=parseDay(g('day'));if(isNaN(a)||isNaN(d))return bad();
     mut(function(){mw(ym).once.push({id:id,name:g('name'),cat:kind==='tax'?'세금':'이번 달만',day:d,amt:a});},'"'+g('name')+'" 이번 달 체크리스트에 넣었어요');if(kind==='tax')after='once';}
   else if(kind==='loan'){if(!req(f,['name','P','rate','n','day']))return;var P=num(g('P')),rate=parseFloat(g('rate').replace(/[^\d.]/g,'')),n=num(g('n')),dd=parseDay(g('day')),st=parseYm(g('start')||ym);
@@ -1135,6 +1142,7 @@ document.addEventListener('submit',function(e){var f=e.target;if(!f.dataset||!f.
   addFrom(f.dataset.form,f);});
 document.addEventListener('change',function(e){
   var t=e.target;
+  if(t.dataset&&t.dataset.chg==='fixedevery'){var ev=Math.max(1,+t.value||1),fid=t.dataset.id;mut(function(){var f=S.fixed.find(function(x){return x.id===fid;});if(!f)return;f.every=ev;if(ev>1&&!fixedOn(f,W.ym)&&!f.start)f.start=W.ym;},EVERY[ev]+'로 바꿨어요');return;}
   if(t.dataset&&t.dataset.chg==='instcard'){var v=t.value,id=t.dataset.id;mut(function(){var it=S.insts.find(function(x){return x.id===id;});if(it)it.cardId=v;});}
 });
 document.getElementById('importFile').addEventListener('change',function(e){
