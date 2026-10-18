@@ -228,6 +228,21 @@ select.in{padding-right:24px;-webkit-appearance:none;appearance:none;background-
 .savnow .bar i{display:block;height:100%;border-radius:99px;background:var(--ok)}
 .savfoot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 18px 14px;border-top:1px solid var(--line);font-size:13px;color:var(--t2)}
 .savfoot b{color:var(--text)}
+.dlist{padding:2px 18px 10px;display:flex;flex-direction:column;gap:9px}
+.drow{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) auto;gap:10px;align-items:center}
+.drow .dl{display:flex;flex-direction:column;min-width:0}
+.drow .dl .nm{font-weight:700;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.drow .dl .small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dbar{height:8px;border-radius:99px;background:var(--chip);overflow:hidden}
+.dbar i{display:block;height:100%;border-radius:99px}
+.dbar.ok i{background:var(--ok)} .dbar.red i{background:var(--red)}
+.drow .dv{font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right;min-width:84px}
+.chartwrap{padding:0 14px 10px}
+.netsvg{width:100%;height:auto;display:block}
+.tbl tr.grp td{background:var(--row);padding-top:10px;padding-bottom:10px}
+.grph{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.grph b{font-size:13.5px}
+.etcbox{padding:10px 18px 12px;border-top:1px solid var(--line)}
 .jump{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:12px}
 #sec-loan,#sec-lend,#sec-debt,#sec-settle,#sec-tax,#sec-taxcal{scroll-margin-top:calc(env(safe-area-inset-top,0px) + 74px)}
 .demo-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:var(--warn-bg);color:var(--warn-ink);border-radius:12px;padding:9px 14px;font-size:12.5px;font-weight:600;margin-bottom:14px}
@@ -296,10 +311,10 @@ select.in{padding-right:24px;-webkit-appearance:none;appearance:none;background-
 /* ── 폰 (<900) ── */
 @media (max-width:899px){
   .app{display:block}
-  .nav{position:fixed;top:auto;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px));width:auto;height:62px;flex-direction:row;gap:0;padding:5px;border:1px solid var(--line);border-radius:20px;box-shadow:var(--sh2);background:rgba(255,255,255,.94);-webkit-backdrop-filter:saturate(180%) blur(16px);backdrop-filter:saturate(180%) blur(16px)}
+  .nav{position:fixed;top:auto;left:8px;right:8px;bottom:calc(10px + env(safe-area-inset-bottom,0px));width:auto;height:62px;flex-direction:row;gap:0;padding:5px;border:1px solid var(--line);border-radius:20px;box-shadow:var(--sh2);background:rgba(255,255,255,.94);-webkit-backdrop-filter:saturate(180%) blur(16px);backdrop-filter:saturate(180%) blur(16px)}
   .nav .logo,.nav-foot,.nav kbd{display:none}
-  .nav button[data-tab]{flex:1;min-width:0;flex-direction:column;gap:3px;padding:0;justify-content:center;font-size:10px;border-radius:12px;white-space:nowrap}
-  .nav button[data-tab] svg{width:19px;height:19px}
+  .nav button[data-tab]{flex:1;min-width:0;flex-direction:column;gap:3px;padding:0;justify-content:center;font-size:9.5px;letter-spacing:-.04em;border-radius:11px;white-space:nowrap}
+  .nav button[data-tab] svg{width:18px;height:18px}
   .nav button[data-tab] .lb{display:none}
   .nav button[data-tab] .ls{display:block}
   .nav button[data-tab].act{background:var(--chip);color:var(--ink)}
@@ -339,15 +354,16 @@ select.in{padding-right:24px;-webkit-appearance:none;appearance:none;background-
 <div class="app">
   <nav class="nav" aria-label="메뉴">
     <div class="logo">P<span>AY</span><b>.LOG</b></div>
-    <button type="button" data-act="tab" data-tab="month"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M3 9h18M8 2v4M16 2v4"/></svg><span class="lb">이번 달</span><span class="ls">이번달</span><kbd>1</kbd></button>
-    <button type="button" data-act="tab" data-tab="income"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11M7 9.5l5 5 5-5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg><span class="lb">수입</span><span class="ls">수입</span><kbd>2</kbd></button>
-    <button type="button" data-act="tab" data-tab="loan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V10l7-6 7 6v11"/><path d="M9 21v-6h6v6"/></svg><span class="lb">대출</span><span class="ls">대출</span><kbd>3</kbd></button>
-    <button type="button" data-act="tab" data-tab="fixed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span class="lb">고정지출</span><span class="ls">고정</span><kbd>4</kbd></button>
-    <button type="button" data-act="tab" data-tab="card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20"/></svg><span class="lb">카드값</span><span class="ls">카드</span><kbd>5</kbd></button>
-    <button type="button" data-act="tab" data-tab="inst"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg><span class="lb">할부</span><span class="ls">할부</span><kbd>6</kbd></button>
-    <button type="button" data-act="tab" data-tab="settle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10h13l-4-4M17 14H4l4 4"/></svg><span class="lb">정산 · 주고받을 돈</span><span class="ls">정산</span><kbd>7</kbd></button>
-    <button type="button" data-act="tab" data-tab="save"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6"/><path d="M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6"/></svg><span class="lb">저축 · 투자</span><span class="ls">저축</span><kbd>8</kbd></button>
-    <button type="button" data-act="tab" data-tab="tax"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18"/><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></svg><span class="lb">세금</span><span class="ls">세금</span><kbd>9</kbd></button>
+    <button type="button" data-act="tab" data-tab="dash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg><span class="lb">재정 한눈에</span><span class="ls">한눈에</span><kbd>1</kbd></button>
+    <button type="button" data-act="tab" data-tab="month"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M3 9h18M8 2v4M16 2v4"/></svg><span class="lb">이번 달</span><span class="ls">이번달</span><kbd>2</kbd></button>
+    <button type="button" data-act="tab" data-tab="income"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11M7 9.5l5 5 5-5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg><span class="lb">수입</span><span class="ls">수입</span><kbd>3</kbd></button>
+    <button type="button" data-act="tab" data-tab="loan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V10l7-6 7 6v11"/><path d="M9 21v-6h6v6"/></svg><span class="lb">대출</span><span class="ls">대출</span><kbd>4</kbd></button>
+    <button type="button" data-act="tab" data-tab="fixed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span class="lb">고정지출</span><span class="ls">고정</span><kbd>5</kbd></button>
+    <button type="button" data-act="tab" data-tab="card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20"/></svg><span class="lb">카드값</span><span class="ls">카드</span><kbd>6</kbd></button>
+    <button type="button" data-act="tab" data-tab="inst"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg><span class="lb">할부</span><span class="ls">할부</span><kbd>7</kbd></button>
+    <button type="button" data-act="tab" data-tab="settle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10h13l-4-4M17 14H4l4 4"/></svg><span class="lb">정산 · 주고받을 돈</span><span class="ls">정산</span><kbd>8</kbd></button>
+    <button type="button" data-act="tab" data-tab="save"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6"/><path d="M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6"/></svg><span class="lb">저축 · 투자</span><span class="ls">저축</span><kbd>9</kbd></button>
+    <button type="button" data-act="tab" data-tab="tax"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18"/><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></svg><span class="lb">세금</span><span class="ls">세금</span><kbd>0</kbd></button>
     <div class="nav-foot">
       <button type="button" class="lnk" data-act="sheet" data-v="1"><span class="lb">데이터 · 백업</span><span class="ls">백업</span></button>
       <span id="navver"></span>
@@ -378,9 +394,9 @@ select.in{padding-right:24px;-webkit-appearance:none;appearance:none;background-
 
 <script>
 'use strict';
-var APP_VER='2026.10.18n';
-var TABS=['month','income','loan','fixed','card','inst','settle','save','tax'];
-var TAB_NAME={month:'이번 달',income:'수입',loan:'대출',fixed:'고정지출',card:'카드값',inst:'할부',settle:'정산 · 주고받을 돈',save:'저축 · 투자',tax:'세금'};
+var APP_VER='2026.10.18p';
+var TABS=['dash','month','income','loan','fixed','card','inst','settle','save','tax'];
+var TAB_NAME={dash:'재정 한눈에',month:'이번 달',income:'수입',loan:'대출',fixed:'고정지출',card:'카드값',inst:'할부',settle:'정산 · 주고받을 돈',save:'저축 · 투자',tax:'세금'};
 var METHOD={equal:'매달 같은 금액',prin:'원금 똑같이',bullet:'이자만, 끝에 원금'};
 var CAT_EMO={'주거':'🏠','관리비':'🏠','공과금':'💡','통신':'📱','구독':'🔁','구독료':'🔁','구독,통신':'🔁','보험':'🛡️','저축':'🐷','적금':'🐷','투자':'📈','투자비':'📈','가족':'👨‍👩‍👧','용돈':'💌','대출':'🏦','대출이자':'💸','교통':'🚌','교통비':'🚌','차량':'🚗','세금':'💲','식비':'🍚','카페':'☕','간식':'🍪','생활비':'🛒','생활용품':'🧼','필수품':'🧻','의료':'🩺','병원':'🩺','패션':'👚','의류':'👕','뷰티':'💄','뷰티케어':'💄','바디케어':'🛁','경조사':'🎁','경조사비':'🎁','교육':'📚','강의':'📚','문구':'🖊️','전자물품':'💻','가구용품':'🛋️','제품':'📦','카드':'💳','카드대금':'💰','급여':'💰','월급':'💰','정산':'🔄','이번 달만':'🗓️','반려동물':'🐶','운동':'🏃','여행':'✈️','기타':'📌'};
 var CATS=['주거','공과금','통신','구독','보험','대출','저축','투자','가족','교통','차량','식비','생활비','의료','교육','경조사','세금','기타'];
@@ -425,10 +441,10 @@ function parseYmLoose(s,base){var y=parseYm(s);if(y)return y;var m=String(s).mat
 function parseCnt(s){s=String(s).trim();if(!s||/매달|없/.test(s))return {k:0,of:0,empty:true};var m=s.match(/(\d+)\s*(?:\/\s*(\d+))?/);if(!m)return null;return {k:Math.max(0,+m[1]),of:m[2]?+m[2]:0};}
 
 /* ── 저장 ── */
-function blank(){return {v:1,loans:[],lends:[],debts:[],saves:[],fixed:[],incomes:[],cards:[],insts:[],partner:{name:'오빠',me:'나',day:5},sItems:[],taxSet:{car:false,house:false,biz:false},months:{}};}
+function blank(){return {v:1,loans:[],lends:[],debts:[],saves:[],assets:[],fixed:[],incomes:[],cards:[],insts:[],partner:{name:'오빠',me:'나',day:5},sItems:[],taxSet:{car:false,house:false,biz:false},months:{}};}
 function normalize(d){
   var b=blank(); if(!d||typeof d!=='object') return b;
-  ['loans','lends','debts','saves','fixed','incomes','cards','insts','sItems'].forEach(function(k){if(Array.isArray(d[k]))b[k]=d[k].filter(function(x){return x&&x.id;});});
+  ['loans','lends','debts','saves','assets','fixed','incomes','cards','insts','sItems'].forEach(function(k){if(Array.isArray(d[k]))b[k]=d[k].filter(function(x){return x&&x.id;});});
   if(d.partner&&typeof d.partner==='object')b.partner={name:d.partner.name||'오빠',me:d.partner.me||'나',day:+d.partner.day||5};
   if(d.taxSet)b.taxSet={car:!!d.taxSet.car,house:!!d.taxSet.house,biz:!!d.taxSet.biz};
   if(d.months&&typeof d.months==='object')b.months=d.months;
@@ -447,7 +463,7 @@ try{bc=new BroadcastChannel('paylog');}catch(e){}
 function warnSave(){if(!saveWarned){saveWarned=true;toast('이 브라우저에서는 저장이 안 돼요. 데이터 → 백업 파일 저장으로 보관해 주세요.');}}
 function save(fromCloud){if(!fromCloud)S._ts=Date.now();idbSet('state',JSON.stringify(S)).then(function(){if(bc)bc.postMessage('saved');},warnSave);if(!fromCloud)cloudPush();}
 var S=blank();
-var W={tab:'month',ym:CUR,filter:'all',loanSel:null,schedAll:false,loanForm:false,sheet:false,confirm:null,copyText:null,pendingImport:null};
+var W={tab:'dash',ym:CUR,filter:'all',loanSel:null,schedAll:false,loanForm:false,sheet:false,confirm:null,copyText:null,pendingImport:null};
 var HIST=[], pendingRender=false;
 function snap(){HIST.push(JSON.stringify(S));if(HIST.length>40)HIST.shift();}
 function undo(){if(!HIST.length){toast('되돌릴 게 없어요');return;}S=normalize(JSON.parse(HIST.pop()));save();render();toast('되돌렸어요');}
@@ -865,7 +881,7 @@ function vFixed(){
   var thisTax=taxesIn(ym);
   var h='<div class="stats">'+stat(mLabel(ym)+' 고정지출',won(sum)+'원',nOn+'건 · 한 달 평균 '+won(avg)+'원','dark')+stat('이번 달 나감',won(paid)+'원',nPaid+'건','','ok')+stat('나갈 돈',won(sum-paid)+'원',(nOn-nPaid)+'건','','red')
     +stat('이번 달 세금',thisTax.length?esc(thisTax[0].name):'없음',thisTax.length?(thisTax.length>1?'외 '+(thisTax.length-1)+'건 · ':'')+'세금 탭에서 금액 적기':'세금 탭에서 확인','','txt')+'</div>';
-  var tr=list.map(function(f){
+  var rowOf=function(f){
     var on=fixedOn(f,ym),key='fixed:'+f.id,sp='fixed|'+f.id+'|';
     return '<tr class="'+(!on?'off':'')+'">'
       +'<td class="c-name">'+eds(sp+'name|text',f.name,'<span class="nm">'+esc(f.name)+'</span>','이름')
@@ -877,9 +893,19 @@ function vFixed(){
       +'<td><select class="cellsel" data-chg="fixedevery" data-id="'+esc(f.id)+'" aria-label="주기">'+everyOpts(f.every)+'</select></td>'
       +'<td class="c"><button type="button" class="tgl '+(f.vary?'on':'')+'" data-act="vary" data-id="'+esc(f.id)+'" aria-pressed="'+(f.vary?'true':'false')+'">변동</button></td>'
       +'<td class="r">'+del('fixed',f.id,f.name)+'</td></tr>';
-  }).join('');
+  };
+  var tr;
+  if(W.fixedView==='src'){
+    var groups={},order=[];
+    list.forEach(function(f){var k=String(f.from||'').trim();if(!groups[k]){groups[k]=[];order.push(k);}groups[k].push(f);});
+    order.sort(function(a,b){if(!a)return 1;if(!b)return -1;var sa=groups[a].reduce(function(x,f){return x+(fixedOn(f,ym)?(m.amt['fixed:'+f.id]!=null?+m.amt['fixed:'+f.id]:+f.amt||0):0);},0),sb=groups[b].reduce(function(x,f){return x+(fixedOn(f,ym)?(m.amt['fixed:'+f.id]!=null?+m.amt['fixed:'+f.id]:+f.amt||0):0);},0);return sb-sa;});
+    tr=order.map(function(k){var g=groups[k],s=0,n=0;g.forEach(function(f){if(fixedOn(f,ym)){s+=m.amt['fixed:'+f.id]!=null?+m.amt['fixed:'+f.id]:+f.amt||0;n++;}});
+      var cd=cardOf(k),ck=S.cards.find(function(c){return isChk(c)&&String(c.name).replace(/\s/g,'')===k.replace(/\s/g,'');});
+      return '<tr class="grp"><td colspan="7"><div class="grph"><span><b>'+(k?esc(k):'<span class="t3">빠져나가는 곳 안 적음</span>')+'</b>'+(cd?' <span class="badge gray">신용카드 · 카드값에 포함</span>':ck?' <span class="badge ok">체크카드</span>':'')+'</span><span class="small t2">'+g.length+'개 · '+mLabel(ym)+' '+n+'건 <b>'+won(s)+'원</b></span></div></td></tr>'+g.map(rowOf).join('');}).join('');
+  } else tr=list.map(rowOf).join('');
+  var vbtn=function(v,l){return '<button type="button" class="btn sm '+((W.fixedView||'day')===v?'on':'')+'" data-act="fixview" data-v="'+v+'">'+l+'</button>';};
   var dl='<datalist id="dl-cat">'+CATS.map(function(c){return '<option value="'+c+'">'+catLabel(c)+'</option>';}).join('')+'</datalist><datalist id="dl-from">'+fromList().map(function(c){return '<option value="'+esc(c)+'">';}).join('')+'</datalist>';
-  var left='<div class="panel"><div class="ph"><span class="t">고정지출 목록</span><span class="small t3">출금일 순</span></div>'
+  var left='<div class="panel"><div class="ph"><span class="t">고정지출 목록</span><div class="side">'+vbtn('day','출금일 순')+vbtn('src','카드 · 통장별')+'</div></div>'
     +(list.length?'<div class="tw"><table class="tbl"><thead><tr><th>이름</th><th class="hm">분류</th><th>출금일</th><th class="r">평소 금액</th><th>주기</th><th class="c">변동</th><th></th></tr></thead><tbody>'+tr+'</tbody></table></div>':'<div class="empty"><b>아직 고정지출이 없어요</b>관리비, 통신비, 보험, 구독, 생활비 송금처럼 정해서 나가는 돈을 적어주세요. 2달·3달·1년마다 내는 것도 돼요</div>')
     +'<form class="addf" data-form="fixed">'+dl+'<input class="in w-name" name="name" placeholder="이름 (예: 관리비)" autocomplete="off"><input class="in w-sm" name="cat" placeholder="분류" list="dl-cat" autocomplete="off"><input class="in w-day" name="day" placeholder="출금일" autocomplete="off"><input class="in w-amt" name="amt" placeholder="금액" inputmode="numeric" autocomplete="off"><input class="in w-sm" name="from" placeholder="빠져나가는 곳" list="dl-from" autocomplete="off"><select class="in w-sm" name="every" aria-label="주기">'+everyOpts(1)+'</select><input class="in w-cnt" name="first" placeholder="처음 낼 달" autocomplete="off"><label class="ck"><input type="checkbox" name="vary"> 변동</label><button class="btn save" type="submit">추가</button></form>'
     +'<p class="hint">칸을 누르면 바로 고쳐요(Tab으로 다음 칸). 이름 아래를 누르면 빠져나가는 곳(통장·카드)을 적을 수 있어요. 카드값 화면에 등록한 카드 이름을 적으면 그 카드값에 들어 있는 걸로 보고 합계에 두 번 넣지 않아요. 2달마다처럼 띄엄띄엄 내는 건 주기를 고르고 처음 낼 달을 적으면 그 달들에만 나와요(비우면 지금 보는 달부터). 변동은 관리비·전기처럼 달마다 금액이 다른 것. 그 달 금액은 이번 달 화면에서 고치면 평소 금액은 그대로예요.</p></div>';
@@ -1179,6 +1205,75 @@ function vTax(){
   return h+taxSection(ym,states,tv)+'<div class="grid2"><div class="col">'+taxAlertPanel(ym)+payP+'</div><div class="col">'+taxCalPanel(ym)+'</div></div>';
 }
 
+
+/* ── 재정 한눈에 (대시보드) ──
+   가진 돈 = 저축·투자·세금 모은 돈 + 받을 돈(총액 있는 것) 남은 것
+   남은 빚 = 대출 남은 원금(꺼둔 대출도 빌린 돈 그대로) + 할부 남은 돈 + 줄 돈 남은 것. 순자산 = 가진 돈 − 남은 빚 */
+function finAt(ym){
+  var A=[],D=[];
+  S.saves.forEach(function(s){var st=saveState(s,ym);if(st.value)A.push({k:s.kind,name:s.kind==='tax'?s.name+' '+(+s.rate||0)+'%':s.name,v:st.value});});
+  S.lends.forEach(function(l){var st=lendAt(l,ym);if(!st.open&&st.rem>0)A.push({k:'lend',name:l.who+'한테 받을 돈',v:st.rem});});
+  S.assets.forEach(function(x){if(+x.v>0)A.push({k:'etc',name:x.name,v:+x.v});});
+  S.loans.forEach(function(L){var st=loanState(L,ym);if(st.bal>0)D.push({k:'loan',name:L.name,v:st.bal,end:L.off?null:st.end,total:+L.P||0,off:!!L.off});});
+  S.insts.forEach(function(it){var st=instAt(it,ym);if(st.left>0)D.push({k:'inst',name:it.name,v:st.left,end:st.end,total:+it.total||0});});
+  S.debts.forEach(function(d){var st=debtState(d,ym),left=Math.max(0,st.left);if(left>0)D.push({k:'debt',name:(d.who||S.partner.name)+'한테 줄 돈',v:left,end:st.end,total:+d.amt||0});});
+  var a=A.reduce(function(x,y){return x+y.v;},0),d=D.reduce(function(x,y){return x+y.v;},0);
+  return {A:A,D:D,assets:a,debts:d,net:a-d};
+}
+function netChart(ym){
+  var pts=[];for(var i=-5;i<=6;i++){var m=ymAdd(ym,i);pts.push({m:m,v:finAt(m).net,fut:ymDiff(CUR,m)>0,cur:m===ym});}
+  var hi=Math.max(0,Math.max.apply(null,pts.map(function(p){return p.v;}))),lo=Math.min(0,Math.min.apply(null,pts.map(function(p){return p.v;})));
+  if(hi===lo)hi=lo+1;
+  var W0=600,H0=190,top=22,bot=150,colW=W0/pts.length,bw=Math.min(30,colW*0.56);
+  var y=function(v){return top+(hi-v)/(hi-lo)*(bot-top);},z=y(0);
+  var bars=pts.map(function(p,i){var x=i*colW+(colW-bw)/2,y1=Math.min(y(p.v),z),hh=Math.max(1.5,Math.abs(y(p.v)-z));
+    var fill=p.v>=0?'var(--ok)':'var(--red)';
+    return '<rect x="'+x.toFixed(1)+'" y="'+y1.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+hh.toFixed(1)+'" rx="4" fill="'+fill+'" fill-opacity="'+(p.fut?'.35':p.cur?'1':'.75')+'"><title>'+ymShort(p.m)+' 순자산 '+(p.v<0?'-':'')+won(Math.abs(p.v))+'원'+(p.fut?' (예상)':'')+'</title></rect>'
+      +'<text x="'+(i*colW+colW/2).toFixed(1)+'" y="172" text-anchor="middle" font-size="11" fill="'+(p.cur?'var(--text)':'var(--t3)')+'" font-weight="'+(p.cur?'800':'600')+'">'+(+p.m.slice(5,7))+'월</text>'
+      +(p.cur||i===0||i===pts.length-1?'<text x="'+(i*colW+colW/2).toFixed(1)+'" y="'+(p.v>=0?Math.max(12,y1-6):Math.min(160,y1+hh+13)).toFixed(1)+'" text-anchor="middle" font-size="10.5" font-weight="800" fill="var(--text)">'+(p.v<0?'-':'')+short(p.v)+'</text>':'');}).join('');
+  return '<svg class="netsvg" viewBox="0 0 '+W0+' '+H0+'" role="img" aria-label="순자산 흐름"><line x1="0" x2="'+W0+'" y1="'+z.toFixed(1)+'" y2="'+z.toFixed(1)+'" stroke="var(--line2)" stroke-width="1"/>'+bars+'</svg>';
+}
+function short(v){v=Math.abs(v);if(v>=100000000)return (Math.round(v/10000000)/10)+'억';if(v>=10000)return Math.round(v/10000).toLocaleString('ko-KR')+'만';return won(v);}
+function vDash(){
+  var ym=W.ym;if(!hasData())return welcome();
+  var F=finAt(ym),ins=inRows(ym),outs=outRows(ym).filter(function(r){return !r.excl;});
+  var inT=ins.reduce(function(a,r){return a+r.amt;},0),outT=outs.reduce(function(a,r){return a+r.amt;},0);
+  var toSave=outs.filter(function(r){return r.kind==='save';}).reduce(function(a,r){return a+r.amt;},0),spend=outT-toSave,left=inT-outT;
+  var taxV=F.A.filter(function(x){return x.k==='tax';}).reduce(function(a,x){return a+x.v;},0);
+  var allEnd=null;F.D.forEach(function(d){if(d.end&&(!allEnd||ymDiff(allEnd,d.end)>0))allEnd=d.end;});
+  var offLoan=F.D.some(function(d){return d.off;});
+  var h='<div class="stats">'
+    +'<div class="stat dark"><div class="k">'+mLabel(ym)+' 순자산</div><div class="v '+(F.net>=0?'ok':'red')+'">'+(F.net<0?'-':'')+won(Math.abs(F.net))+'원</div><div class="s">가진 돈 − 남은 빚</div></div>'
+    +stat('가진 돈',won(F.assets)+'원',taxV?'세금으로 쓸 돈 '+won(taxV)+'원 포함':'저축 · 투자 · 받을 돈','','ok')
+    +stat('남은 빚',won(F.debts)+'원',F.debts?(allEnd?'다 갚는 달 '+ymShort(allEnd)+(offLoan?' (꺼둔 대출 빼고)':''):'갚는 일정 없음'):'빚 없음','','red')
+    +stat(mLabel(ym)+' 남는 돈',(left<0?'-':'+')+won(Math.abs(left))+'원','들어오는 돈 − 나가는 돈','',left>=0?'ok':'red')+'</div>';
+  var row=function(x,max,cls,sub){return '<div class="drow"><div class="dl"><span class="nm">'+esc(x.name)+'</span>'+(sub?'<span class="small t3">'+sub+'</span>':'')+'</div><div class="dbar '+cls+'"><i style="width:'+(max?Math.max(2,Math.round(x.v/max*100)):0)+'%"></i></div><div class="dv">'+won(x.v)+'</div></div>';};
+  var KL={save:'저축',invest:'투자',stock:'주식 계좌',tax:'세금 모으기',lend:'받을 돈',etc:'다른 자산'};
+  var aMax=Math.max.apply(null,F.A.map(function(x){return x.v;}).concat([1]));
+  var aP='<div class="panel"><div class="ph"><span class="t">가진 돈</span><span class="small t3">'+won(F.assets)+'원</span></div>'
+    +(F.A.length?'<div class="dlist">'+F.A.sort(function(a,b){return b.v-a.v;}).map(function(x){return row(x,aMax,'ok',KL[x.k]||'');}).join('')+'</div>':'<div class="empty small">저축·투자·받을 돈을 적으면 여기에 모여요</div>')
+    +'<div class="etcbox"><div class="small t2" style="font-weight:700;margin-bottom:6px">다른 자산 (전세보증금 · 차 등)</div>'
+      +(S.assets.length?'<div class="tw"><table class="tbl"><tbody>'+S.assets.map(function(x){var sp='assets|'+x.id+'|';return '<tr>'+ed(sp+'name|text',x.name,'<span class="nm">'+esc(x.name)+'</span>','c-name','이름')+ed(sp+'v|num',x.v,won(x.v),'r amt','금액')+'<td class="r">'+del('assets',x.id,x.name)+'</td></tr>';}).join('')+'</tbody></table></div>':'')
+      +'<form class="addf" data-form="asset" style="padding:8px 0 0;border:none;background:none"><input class="in w-name" name="name" placeholder="이름 (예: 전세보증금)" autocomplete="off"><input class="in w-amt" name="v" placeholder="금액" inputmode="numeric" autocomplete="off"><button class="btn save sm" type="submit">추가</button></form>'
+      +(S.loans.some(function(L){return /전세/.test(L.name);})&&!S.assets.some(function(x){return /전세|보증금/.test(x.name);})?'<p class="small" style="color:var(--warn-ink);margin:8px 0 0">전세대출이 있어요. 전세보증금을 여기 적어야 순자산이 맞게 나와요.</p>':'')+'</div>'
+    +'<div class="savfoot"><span>자세히</span><span class="chips"><button type="button" class="btn sm" data-act="tab" data-tab="save">저축 · 투자</button><button type="button" class="btn sm" data-act="tab" data-tab="tax">세금</button><button type="button" class="btn sm" data-act="gotojump" data-tab="settle" data-to="sec-lend">받을 돈</button></span></div></div>';
+  var dMax=Math.max.apply(null,F.D.map(function(x){return x.v;}).concat([1]));
+  var DL={loan:'대출',inst:'할부',debt:'줄 돈'};
+  var dP='<div class="panel"><div class="ph"><span class="t">남은 빚</span><span class="small t3">'+won(F.debts)+'원</span></div>'
+    +(F.D.length?'<div class="dlist">'+F.D.sort(function(a,b){return b.v-a.v;}).map(function(x){var pct=x.total?Math.round((x.total-x.v)/x.total*100):0;return row(x,dMax,'red',DL[x.k]+(x.off?' · 꺼둠':'')+(x.end?' · '+ymShort(x.end)+' 끝':'')+(x.total?' · '+pct+'% 갚음':''));}).join('')+'</div>':'<div class="empty small">대출·할부·줄 돈이 없어요</div>')
+    +(allEnd?'<p class="hint" style="padding-top:8px">지금 일정대로면 <b>'+ymLabel(allEnd)+'</b>에 빚을 다 갚아요'+(offLoan?' (꺼둔 대출은 상환 일정이 없어서 빼고)':'')+'.</p>':'')
+    +'<div class="savfoot"><span>자세히</span><span class="chips"><button type="button" class="btn sm" data-act="tab" data-tab="loan">대출</button><button type="button" class="btn sm" data-act="tab" data-tab="inst">할부</button><button type="button" class="btn sm" data-act="gotojump" data-tab="settle" data-to="sec-debt">줄 돈</button></span></div></div>';
+  var flow='<div class="panel"><div class="ph"><span class="t">'+mLabel(ym)+' 돈 흐름</span></div><div class="tw"><table class="tbl"><tbody>'
+    +'<tr><td class="nm">들어오는 돈</td><td class="r amt plus">+'+won(inT)+'</td></tr>'
+    +'<tr><td class="nm">나가는 돈</td><td class="r amt minus">-'+won(outT)+'</td></tr>'
+    +'<tr class="off"><td>　그중 쓰는 돈 (고정지출·카드·대출 등)</td><td class="r">'+won(spend)+'</td></tr>'
+    +'<tr class="off"><td>　그중 모으는 돈 (저축·투자·세금)</td><td class="r">'+won(toSave)+'</td></tr>'
+    +'<tr class="sum"><td>남는 돈</td><td class="r '+(left>=0?'plus':'minus')+'">'+(left<0?'-':'+')+won(Math.abs(left))+'원</td></tr>'
+    +'</tbody></table></div><p class="hint">모으는 돈은 나가는 돈에 들어 있지만 사라지는 돈이 아니라 가진 돈으로 쌓여요.</p></div>';
+  var chart='<div class="panel"><div class="ph"><span class="t">순자산 흐름</span><span class="small t3">지난 5달 · 앞으로 6달(흐린 막대 = 지금 계획대로 갔을 때)</span></div><div class="chartwrap">'+netChart(ym)+'</div></div>';
+  return h+'<div class="grid2 even"><div class="col">'+aP+'</div><div class="col">'+dP+'</div></div><div class="grid2" style="margin-top:14px"><div class="col">'+chart+'</div><div class="col">'+flow+'</div></div>';
+}
+
 /* ── 데이터 창 ── */
 function renderSheet(){
   var root=document.getElementById('sheetRoot');
@@ -1198,7 +1293,7 @@ function renderSheet(){
     +'<button type="button" class="sh-item" data-act="import"><b>백업 불러오기</b><span>저장해 둔 파일로 바꿔요</span></button>'
     +'<button type="button" class="sh-item" data-act="demo"><b>예시 데이터 넣기</b><span>어떻게 보이는지 둘러봐요</span></button>'
     +'<button type="button" class="sh-item danger" data-act="reset"><b>모두 지우기</b><span>처음 상태로 돌아가요</span></button>'
-    +'</div><div class="sh-foot">컴퓨터 단축키: 1~9 메뉴 · N 새로 적기 · ← → 달 이동 · ⌘Z / Ctrl+Z 되돌리기<br>표의 칸을 누르면 바로 고쳐요 · Enter 저장 · Tab 다음 칸 · Esc 취소<br>버전 '+APP_VER+'</div>'
+    +'</div><div class="sh-foot">컴퓨터 단축키: 1~9·0 메뉴 · N 새로 적기 · ← → 달 이동 · ⌘Z / Ctrl+Z 되돌리기<br>표의 칸을 누르면 바로 고쳐요 · Enter 저장 · Tab 다음 칸 · Esc 취소<br>버전 '+APP_VER+'</div>'
     +'</div></div>';
 }
 
@@ -1234,7 +1329,7 @@ function loadDemo(){snap();S=demoData();save();W.ym=CUR;W.loanSel=null;W.sheet=f
 /* ── 그리기 ── */
 function render(){
   pendingRender=false;
-  var fn={month:vMonth,income:vIncome,loan:vLoan,fixed:vFixed,card:vCard,inst:vInst,settle:vSettle,save:vSave,tax:vTax}[W.tab];
+  var fn={dash:vDash,month:vMonth,income:vIncome,loan:vLoan,fixed:vFixed,card:vCard,inst:vInst,settle:vSettle,save:vSave,tax:vTax}[W.tab];
   document.getElementById('view').innerHTML=(S.demo?demoBar():'')+fn();
   document.querySelectorAll('.nav [data-tab]').forEach(function(b){var on=b.dataset.tab===W.tab;b.classList.toggle('act',on);if(on)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
   document.getElementById('title').textContent=TAB_NAME[W.tab];
@@ -1242,12 +1337,13 @@ function render(){
   document.getElementById('mtoday').hidden=(W.ym===CUR);
   renderSheet();
 }
-function go(t){W.tab=t;W.copyText=null;W.filter='all';idbSet('ui',{tab:t}).catch(function(){});render();window.scrollTo(0,0);}
+function go(t){W.tab=t;W.copyText=null;W.filter='all';idbSet('ui',{tab:t,fixedView:W.fixedView}).catch(function(){});render();window.scrollTo(0,0);}
 function focusForm(kind){var f=document.querySelector('#view form[data-form="'+kind+'"]');if(!f)return false;var i=f.querySelector('input:not([type=hidden]),select');if(i){i.focus();try{f.scrollIntoView({block:'nearest'});}catch(e){}}return true;}
 function focusAdd(){
   if(W.tab==='loan'){if(!W.loanForm){W.loanForm=true;render();}focusForm('loan');return;}
-  var map={month:'once',income:'income',fixed:'fixed',card:S.cards.length?'cardrec':'card',inst:'inst',settle:'sin',save:'save',tax:'taxsave'};
-  if(W.tab==='month'&&!hasData()){go('fixed');focusForm('fixed');return;}
+  var map={dash:'once',month:'once',income:'income',fixed:'fixed',card:S.cards.length?'cardrec':'card',inst:'inst',settle:'sin',save:'save',tax:'taxsave'};
+  if((W.tab==='month'||W.tab==='dash')&&!hasData()){go('fixed');focusForm('fixed');return;}
+  if(W.tab==='dash'){go('month');focusForm('once');return;}
   focusForm(map[W.tab]);
 }
 
@@ -1345,6 +1441,7 @@ function addFrom(kind,f){
   else if(kind==='sdebt'){if(!req(f,['amt']))return;var sda=num(g('amt')),sds=g('start')?parseYmLoose(g('start'),ym):ym;if(isNaN(sda))return bad();if(!sds)return bad('까기 시작은 10월이나 2026-10처럼 적어주세요');
     mut(function(){S.debts.push({id:id,who:S.partner.name,amt:sda,lendId:'__settle',start:sds,pre:0});},S.partner.name+'한테 줄 돈을 넣었어요 · 입금받을 돈에서 까요');}
   else if(kind==='taxsave'){if(!req(f,['name','rate']))return;var tr0=parseFloat(g('rate').replace(/[^\d.]/g,''));if(!(tr0>0&&tr0<=100))return bad('몇 %인지 숫자로 적어주세요');addTaxSave(g('name'),tr0);return;}
+  else if(kind==='asset'){if(!req(f,['name','v']))return;var av=num(g('v'));if(isNaN(av))return bad();mut(function(){S.assets.push({id:id,name:g('name'),v:av});},'"'+g('name')+'" 가진 돈에 넣었어요');}
   else if(kind==='debt'){if(!req(f,['who','amt']))return;var da=num(g('amt')),dp=g('pre')?num(g('pre')):0,ds=g('start')?parseYmLoose(g('start'),ym):ym;if(isNaN(da)||isNaN(dp))return bad();if(!ds)return bad('까기 시작 달은 11월이나 2026-11처럼 적어주세요');
     mut(function(){S.debts.push({id:id,who:g('who'),amt:da,lendId:g('lendId'),start:ds,pre:dp});},g('who')+'한테 줄 돈을 적었어요'+(g('lendId')?' · 받을 돈으로 까요':''));}
   else if(kind==='lend'){if(!req(f,['who','per','day']))return;var la=g('amt')?num(g('amt')):0,lp=num(g('per')),ld=parseDay(g('day')),pre=g('pre')?num(g('pre')):0;if(isNaN(la)||isNaN(lp)||lp<1||isNaN(ld)||isNaN(pre))return bad();
@@ -1428,7 +1525,7 @@ function mergeStates(a,b){
   if(od.demo&&!nw.demo)return nw;
   if(nw.demo&&!od.demo)return od;
   var r=JSON.parse(JSON.stringify(nw));
-  ['loans','lends','debts','saves','fixed','incomes','cards','insts','sItems'].forEach(function(k){var ids={};r[k].forEach(function(x){ids[x.id]=1;});od[k].forEach(function(x){if(!ids[x.id])r[k].push(JSON.parse(JSON.stringify(x)));});});
+  ['loans','lends','debts','saves','assets','fixed','incomes','cards','insts','sItems'].forEach(function(k){var ids={};r[k].forEach(function(x){ids[x.id]=1;});od[k].forEach(function(x){if(!ids[x.id])r[k].push(JSON.parse(JSON.stringify(x)));});});
   Object.keys(od.months).forEach(function(ym){
     var o=od.months[ym]||{},m=r.months[ym]||(r.months[ym]={});
     ['paid','amt','got'].forEach(function(f){m[f]=Object.assign({},o[f]||{},m[f]||{});});
@@ -1559,6 +1656,7 @@ document.addEventListener('click',function(e){
       case 'taxinc':mut(function(){var s=S.saves.find(function(x){return x.id===d.id;});if(!s)return;s.incs=s.incs||[];var k=s.incs.indexOf(d.inc);if(k>=0)s.incs.splice(k,1);else s.incs.push(d.inc);});break;
       case 'taxpreset':addTaxSave(d.n,+d.r);break;
       case 'gotojump':go(d.tab);(function(){var el=document.getElementById(d.to);if(el)el.scrollIntoView();})();break;
+      case 'fixview':W.fixedView=d.v;idbSet('ui',{tab:W.tab,fixedView:W.fixedView}).catch(function(){});render();break;
       case 'cardtype':mut(function(){var c=S.cards.find(function(x){return x.id===d.id;});if(c)c.type=isChk(c)?'credit':'check';},'카드 종류를 바꿨어요');break;
       case 'loanoff':mut(function(){var L=S.loans.find(function(x){return x.id===d.id;});if(L)L.off=d.v==='1';},d.v==='1'?'대출을 꺼뒀어요 · 합계에서 빠져요':'대출을 켰어요 · 첫 상환 달을 확인해 주세요');break;
       case 'viafixed':mut(function(){var L=S.loans.find(function(x){return x.id===d.id;});if(L)L.viaFixed=d.v==='1';},d.v==='1'?'이번 달 합계엔 고정지출 쪽만 넣을게요':'이번 달 합계에 대출 상환을 넣을게요');break;
@@ -1597,8 +1695,8 @@ document.addEventListener('keydown',function(e){
   if((e.metaKey||e.ctrlKey)&&!e.shiftKey&&!e.altKey&&(e.key==='z'||e.key==='Z'||e.code==='KeyZ')&&!typing){e.preventDefault();undo();return;}
   if(typing||e.metaKey||e.ctrlKey||e.altKey)return;
   if(t&&t.classList&&t.classList.contains('ed')&&(e.key==='Enter'||e.key==='F2')){e.preventDefault();startEdit(t);return;}
-  var mm=/^Digit([1-9])$/.exec(e.code||'');
-  if(mm){e.preventDefault();go(TABS[+mm[1]-1]);return;}
+  var mm=/^Digit([0-9])$/.exec(e.code||'');
+  if(mm){e.preventDefault();var ti=mm[1]==='0'?9:+mm[1]-1;if(TABS[ti])go(TABS[ti]);return;}
   if(e.code==='KeyN'){e.preventDefault();focusAdd();return;}
   if(e.code==='ArrowLeft'||e.code==='ArrowRight'){if(t&&t.closest&&t.closest('.tw'))return;e.preventDefault();W.ym=ymAdd(W.ym,e.code==='ArrowLeft'?-1:1);W.copyText=null;render();}
 });
@@ -1606,7 +1704,7 @@ function reloadFromDB(){return idbGet('state').then(function(raw){if(raw){try{S=
 if(bc)bc.onmessage=function(){var a=document.activeElement;if(a&&a.matches&&a.matches('input,select,textarea'))return;reloadFromDB().then(render);};
 
 document.getElementById('navver').textContent='v '+APP_VER;
-reloadFromDB().then(function(){return idbGet('ui');}).then(function(ui){if(ui&&TABS.indexOf(ui.tab)>=0)W.tab=ui.tab;})
+reloadFromDB().then(function(){return idbGet('ui');}).then(function(ui){if(ui&&TABS.indexOf(ui.tab)>=0)W.tab=ui.tab;if(ui&&ui.fixedView)W.fixedView=ui.fixedView;})
   .catch(function(){warnSave();}).then(function(){render();cloudInit();});
 </script>
 </body>
