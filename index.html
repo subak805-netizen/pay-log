@@ -185,6 +185,12 @@ select.in{padding-right:24px;-webkit-appearance:none;appearance:none;background-
 .cc-now{display:flex;align-items:baseline;gap:8px;padding:2px 18px 12px;flex-wrap:wrap}
 .cc-now .k{font-size:12px;color:var(--t2);font-weight:600}
 .cc-now .v{font-size:20px;font-weight:800;letter-spacing:-.03em}
+.cc-break{padding:0 18px 8px;font-size:12.5px;color:var(--t2);line-height:1.6}
+.cc-break b{color:var(--text)}
+.cc-warn{margin:0 18px 10px;padding:8px 11px;border-radius:10px;background:var(--red-bg);color:var(--red);font-size:12px;font-weight:600;line-height:1.55}
+.cc-items{display:flex;flex-wrap:wrap;gap:5px;padding:0 18px 12px}
+.cc-items span{font-size:11.5px;color:var(--t2);background:var(--chip);border-radius:7px;padding:3px 8px;white-space:nowrap}
+.cc-items b{color:var(--text);font-weight:700}
 .mrow{display:flex;align-items:center;gap:10px;padding:8px 18px;border-top:1px solid var(--line);font-size:13px}
 .mrow .mm{width:52px;color:var(--t2);font-weight:600;flex:0 0 auto;white-space:nowrap}
 .mrow .mbar{flex:1;height:6px;border-radius:99px;background:var(--chip);overflow:hidden}
@@ -343,7 +349,7 @@ select.in{padding-right:24px;-webkit-appearance:none;appearance:none;background-
 
 <script>
 'use strict';
-var APP_VER='2026.10.18a';
+var APP_VER='2026.10.18b';
 var TABS=['month','loan','fixed','card','inst','settle'];
 var TAB_NAME={month:'이번 달',loan:'대출 · 받을 돈',fixed:'고정지출 · 수입 · 세금',card:'카드값',inst:'할부',settle:'정산'};
 var METHOD={equal:'매달 같은 금액',prin:'원금 똑같이',bullet:'이자만, 끝에 원금'};
@@ -451,10 +457,29 @@ function cardOf(from){var s=String(from||'').replace(/\s/g,'');if(!s)return null
 function fromList(){var seen={},out=[];S.cards.map(function(c){return c.name;}).concat(S.fixed.map(function(f){return f.from;}),S.loans.map(function(L){return L.bank;}),['우리카드','카카오뱅크','국민은행','신한은행','하나은행','우리은행','토스뱅크','농협']).forEach(function(x){x=String(x||'').trim();if(x&&!seen[x]){seen[x]=1;out.push(x);}});return out;}
 function fixedNext(f,ym){for(var i=0;i<=24;i++){var y=ymAdd(ym,i);if(fixedOn(f,y))return y;}return null;}
 function everyOpts(sel){return Object.keys(EVERY).map(function(k){return '<option value="'+k+'"'+(+k===(+sel||1)?' selected':'')+'>'+EVERY[k]+'</option>';}).join('');}
+/* 카드값 = 미리 잡힌 돈(그 달 할부 + 그 카드로 나가는 고정지출·이번 달만 지출) + 그 외 사용.
+   할부·카드 고정지출은 카드값 안에서만 세고 따로 합계에 더하지 않음(이중계산 방지) */
+function cardKnown(c,ym){
+  var m=mo(ym),items=[],inst=0,fx=0;
+  S.insts.forEach(function(it){if(it.cardId!==c.id)return;var s=instAt(it,ym);if(s.on){inst+=s.amt;items.push({k:'할부',name:it.name,amt:s.amt,sub:s.k+'/'+s.n});}});
+  S.fixed.forEach(function(f){var cd=cardOf(f.from);if(!cd||cd.id!==c.id||!fixedOn(f,ym))return;var ov=m.amt['fixed:'+f.id],a=ov!=null?+ov:+f.amt||0;fx+=a;items.push({k:'고정',name:f.name,amt:a});});
+  m.once.forEach(function(o){var cd=cardOf(o.from);if(!cd||cd.id!==c.id)return;fx+=+o.amt||0;items.push({k:'이번 달만',name:o.name,amt:+o.amt||0});});
+  return {inst:inst,fixed:fx,sum:inst+fx,items:items};
+}
 function cardAt(c,ym){
-  var rec=mo(ym).amt['card:'+c.id]; if(rec!=null) return {amt:+rec,rec:true};
-  for(var i=1;i<=12;i++){var p=ymAdd(ym,-i),v=mo(p).amt['card:'+c.id];if(v!=null)return {amt:+v,rec:false,from:p};}
-  return {amt:0,rec:false,none:true};
+  var K=cardKnown(c,ym),rec=mo(ym).amt['card:'+c.id];
+  if(rec!=null){var other=+rec-K.sum;return {amt:+rec,rec:true,known:K,other:other,short:other<-Math.max(1000,Math.round(K.sum*0.01))};}
+  for(var i=1;i<=12;i++){var p=ymAdd(ym,-i),v=mo(p).amt['card:'+c.id];if(v!=null){var oth=Math.max(0,+v-cardKnown(c,p).sum);return {amt:K.sum+oth,rec:false,known:K,other:oth,from:p};}}
+  return {amt:K.sum,rec:false,known:K,other:0,noBase:true,none:!K.sum};
+}
+function cardBreak(a){
+  var K=a.known,parts=[];
+  if(K.inst)parts.push('할부 '+won(K.inst));
+  if(K.fixed)parts.push('카드 고정지출 '+won(K.fixed));
+  if(a.rec)parts.push('그 외 사용 '+won(Math.max(0,a.other)));
+  else if(a.noBase)parts.push(K.sum?'그 외 사용은 카드값을 한 번 기록하면 예상해요':'카드값을 기록하면 예상해요');
+  else parts.push('그 외 사용 '+won(a.other)+' (지난 기록 기준)');
+  return parts.join(' + ');
 }
 function instAt(it,ym){
   var n=Math.max(1,+it.n||1),total=+it.total||0,per=Math.round(total/n),k=ymDiff(it.start,ym)+1;
@@ -506,9 +531,9 @@ function outRows(ym){
     var cd=cardOf(f.from);if(cd)inCardSum[cd.id]=(inCardSum[cd.id]||0)+amt;
     rows.push({key:key,kind:'fixed',name:f.name,cat:f.cat||'고정',day:+f.day||1,amt:amt,paid:!!m.paid[key],vary:!!f.vary,every:+f.every||1,src:f.from||'',inCard:cd?cd.name:'',excl:!!cd,usual:+f.amt||0,ov:ov!=null&&+ov!==+f.amt,spec:'mamt|'+key+'||num',raw:amt});});
   S.cards.forEach(function(c){var key='card:'+c.id,ca=cardAt(c,ym),ins=instForCard(c.id,ym);
-    rows.push({key:key,kind:'card',name:c.name+' 결제',cat:'카드',day:+c.day||1,amt:ca.amt,paid:!!m.paid[key],est:!ca.rec,none:!!ca.none,inst:ins,fixIn:inCardSum[c.id]||0,src:c.name,spec:'mamt|'+key+'||num',raw:ca.rec?ca.amt:''});});
-  m.once.forEach(function(o){var key='once:'+o.id;
-    rows.push({key:key,kind:'once',id:o.id,name:o.name,cat:o.cat||'이번 달만',day:+o.day||1,amt:+o.amt||0,paid:!!m.paid[key],spec:'once|'+o.id+'|amt|num',raw:+o.amt||0});});
+    rows.push({key:key,kind:'card',name:c.name+' 결제',cat:'카드',day:+c.day||1,amt:ca.amt,paid:!!m.paid[key],est:!ca.rec,none:!!ca.none,ca:ca,src:c.name,spec:'mamt|'+key+'||num',raw:ca.rec?ca.amt:''});});
+  m.once.forEach(function(o){var key='once:'+o.id,cd=cardOf(o.from);
+    rows.push({key:key,kind:'once',id:o.id,name:o.name,cat:o.cat||'이번 달만',day:+o.day||1,amt:+o.amt||0,paid:!!m.paid[key],src:o.from||'',inCard:cd?cd.name:'',excl:!!cd,spec:'once|'+o.id+'|amt|num',raw:+o.amt||0});});
   var prev=ymAdd(ym,-1),sp=settleOf(prev);
   if(sp.has&&sp.net<0) rows.push({key:'settle',kind:'settleout',name:S.partner.name+'에게 정산 ('+mLabel(prev)+'분)',cat:'정산',day:+S.partner.day||5,amt:-sp.net,paid:!!sp.settled,prevYm:prev});
   rows.forEach(function(r){r.paid=passed(ym,r.day);});
@@ -572,7 +597,8 @@ function vMonth(){
     var st=statusOf(ym,r.day),sub='',tag='';
     if(r.kind==='loan')sub=r.sub+(r.src?' · '+r.src:'');
     if(r.kind==='fixed'){if(r.every>1)tag+=' <span class="badge gray">'+EVERY[r.every]+'</span>';if(r.vary)tag+=' <span class="badge warn">변동</span>';sub=(r.src?r.src+'에서':'')+(r.ov?(r.src?' · ':'')+'평소 '+won(r.usual)+'원':'');}
-    if(r.kind==='card'){sub=r.none?'금액을 눌러 적어주세요':(r.est?'예상 · 지난 기록 기준':'');if(r.inst)sub+=(sub?' · ':'')+'할부 '+won(r.inst)+' 포함';if(r.fixIn)sub+=(sub?' · ':'')+'고정지출 '+won(r.fixIn)+' 포함';}
+    if(r.kind==='card'){sub=r.none?'금액을 눌러 적어주세요':(r.est?'예상: ':'')+cardBreak(r.ca);}
+    if(r.kind==='once'&&r.src)sub=r.src+'에서';
     if(r.kind==='once'&&r.cat==='세금')tag=' <span class="badge gray">세금</span>';
     var amtTxt=r.kind==='card'&&r.none?'<span class="t3">금액 입력</span>':(r.kind==='card'&&r.est?'<span class="t3">'+won(r.amt)+'</span>':won(r.amt));
     var amtCell=r.spec?ed(r.spec,r.raw,amtTxt,'r amt',r.name+' 금액'):'<td class="r amt">'+won(r.amt)+'</td>';
@@ -587,8 +613,8 @@ function vMonth(){
   var checklist='<div class="panel"><div class="ph"><span class="t">'+mLabel(ym)+' 나가는 돈</span><div class="side">'+fbtn('all','전체 '+cnt.length)+fbtn('left','나갈 것 '+nLeft)+fbtn('paid','나간 것 '+nPaid)+'</div></div>'
     +(rows.length?'<div class="tw"><table class="tbl"><thead><tr><th>날짜</th><th>내용</th><th class="hm">분류</th><th class="r">금액</th><th class="r">상태</th></tr></thead><tbody>'+(tr||'<tr><td colspan="5" class="t3" style="padding:18px">'+(f==='left'?'다 나갔어요':'아직 나간 게 없어요')+'</td></tr>')+'</tbody></table></div>'
       :'<div class="empty">'+mLabel(ym)+'에 나갈 돈이 아직 없어요</div>')
-    +'<form class="addf" data-form="once"><span class="lbl">이번 달만 나가는 돈 (세금·경조사 등)</span><input class="in w-name" name="name" placeholder="내용" autocomplete="off"><input class="in w-day" name="day" placeholder="날짜 (예: 20)" autocomplete="off"><input class="in w-amt" name="amt" placeholder="금액" inputmode="numeric" autocomplete="off"><button class="btn save" type="submit">추가</button></form>'
-    +'<p class="hint">금액을 누르면 이번 달 금액만 바로 고칠 수 있어요. 관리비·전기처럼 달마다 다른 건 고지서 나오면 여기서 고치세요.</p></div>';
+    +'<form class="addf" data-form="once"><span class="lbl">이번 달만 나가는 돈 (세금·경조사 등)</span><input class="in w-name" name="name" placeholder="내용" autocomplete="off"><input class="in w-day" name="day" placeholder="날짜 (예: 20)" autocomplete="off"><input class="in w-amt" name="amt" placeholder="금액" inputmode="numeric" autocomplete="off"><input class="in w-sm" name="from" placeholder="빠져나가는 곳" list="dl-from-m" autocomplete="off"><datalist id="dl-from-m">'+fromList().map(function(c){return '<option value="'+esc(c)+'">';}).join('')+'</datalist><button class="btn save" type="submit">추가</button></form>'
+    +'<p class="hint">카드로 낸 건 빠져나가는 곳에 카드 이름을 적으면 그 카드값에 들어간 걸로 보고 두 번 세지 않아요. 금액을 누르면 이번 달 금액만 바로 고칠 수 있어요. 관리비·전기처럼 달마다 다른 건 고지서 나오면 여기서 고치세요.</p></div>';
   var cats=[['loan','대출'],['fixed','고정지출'],['card','카드값'],['once','이번 달만'],['settleout','정산']].map(function(c){
     var s=0,n=0,p=0;cnt.forEach(function(r){if(r.kind===c[0]){s+=r.amt;n++;if(r.paid)p++;}});
     return n?'<tr><td class="nm">'+c[1]+'</td><td class="t2">'+n+'건 중 '+p+'건 냄</td><td class="r amt">'+won(s)+'원</td></tr>':'';}).join('');
@@ -756,22 +782,26 @@ function vFixed(){
 /* ── 카드값 ── */
 function vCard(){
   var ym=W.ym,m=mo(ym),tot=0,paid=0,est=0,instAll=0;
-  S.cards.forEach(function(c){var a=cardAt(c,ym);tot+=a.amt;if(!a.rec)est+=a.amt;if(passed(ym,+c.day||1))paid+=a.amt;instAll+=instForCard(c.id,ym);});
+  S.cards.forEach(function(c){var a=cardAt(c,ym);tot+=a.amt;if(!a.rec)est+=a.amt;if(passed(ym,+c.day||1))paid+=a.amt;instAll+=a.known.sum;});
   var h='<div class="stats">'+stat(mLabel(ym)+' 카드값 ('+S.cards.length+'장)',won(tot)+'원',est?'예상 '+won(est)+'원 포함':'모두 기록됨','dark')
-    +stat('나간 카드값',won(paid)+'원','','','ok')+stat('아직 안 나감',won(tot-paid)+'원','','','red')+stat('이 중 할부',won(instAll)+'원','카드값 안에 들어 있어요')+'</div>';
+    +stat('나간 카드값',won(paid)+'원','','','ok')+stat('아직 안 나감',won(tot-paid)+'원','','','red')+stat('미리 잡힌 돈',won(instAll)+'원','할부 + 카드 고정지출')+'</div>';
   var addCard='<form class="addf" data-form="card"><span class="lbl">카드 추가</span><input class="in w-name" name="name" placeholder="카드 이름 (예: 현대카드)" autocomplete="off"><input class="in w-day" name="day" placeholder="결제일" autocomplete="off"><button class="btn save" type="submit">추가</button></form>';
   if(!S.cards.length) return h+'<div class="panel"><div class="empty"><b>등록된 카드가 없어요</b>카드를 추가하면 카드값을 낸 다음에 카드별로 얼마 냈는지 기록할 수 있어요</div>'+addCard+'</div>';
   var rec='<div class="panel" style="margin-bottom:14px"><form class="addf" data-form="cardrec" style="border-top:none;background:var(--card)"><span class="lbl">'+mLabel(ym)+' 카드값 낸 거 기록하기</span><select class="in w-sm" name="cardId" aria-label="카드">'+cardOpts('')+'</select><input class="in w-amt" name="amt" placeholder="낸 금액" inputmode="numeric" autocomplete="off"><button class="btn save" type="submit">기록</button></form></div>';
   var cards=S.cards.map(function(c,ci){
-    var a=cardAt(c,ym),key='card:'+c.id,ins=instForCard(c.id,ym),sp='cards|'+c.id+'|';
+    var a=cardAt(c,ym),key='card:'+c.id,sp='cards|'+c.id+'|',K=a.known;
     var hist=[],mx=1;for(var i=0;i<6;i++){var y=ymAdd(ym,-i),v=mo(y).amt[key];hist.push({ym:y,v:v});if(v!=null&&+v>mx)mx=+v;}
     var hh=hist.map(function(x,i){return '<div class="mrow '+(i===0?'cur':'')+'"><span class="mm">'+mLabel(x.ym)+'</span><div class="mbar"><i style="width:'+(x.v!=null?Math.round(+x.v/mx*100):0)+'%"></i></div><span class="mv">'+(x.v!=null?won(x.v)+'원':'<span class="t3">—</span>')+'</span></div>';}).join('');
     var st=statusOf(ym,+c.day||1);
-    return '<div class="panel"><div class="cc-head"><span class="cc-chip c'+(ci%3)+'"></span><div class="bd"><div class="cc-nm">'+eds(sp+'name|text',c.name,esc(c.name),'카드 이름')+'</div><div class="cc-sub">결제일 '+eds(sp+'day|day',dayRaw(+c.day||1),dayLabel(+c.day||1),'결제일')+(ins?' · 이 중 할부 '+won(ins)+'원':'')+'</div></div>'
+    return '<div class="panel"><div class="cc-head"><span class="cc-chip c'+(ci%3)+'"></span><div class="bd"><div class="cc-nm">'+eds(sp+'name|text',c.name,esc(c.name),'카드 이름')+'</div><div class="cc-sub">결제일 '+eds(sp+'day|day',dayRaw(+c.day||1),dayLabel(+c.day||1),'결제일')+'</div></div>'
       +badge(st)+del('cards',c.id,c.name)+'</div>'
-      +'<div class="cc-now"><span class="k">'+mLabel(ym)+' 카드값</span><span class="v">'+eds('mamt|'+key+'||num',a.rec?a.amt:'',a.rec?won(a.amt)+'원':'<span class="t3">'+(a.none?'금액 입력':won(a.amt)+'원 (예상)')+'</span>',c.name+' 금액')+'</span></div>'+hh+'</div>';
+      +'<div class="cc-now"><span class="k">'+mLabel(ym)+' 카드값</span><span class="v">'+eds('mamt|'+key+'||num',a.rec?a.amt:'',a.rec?won(a.amt)+'원':'<span class="t3">'+(a.none?'금액 입력':won(a.amt)+'원 (예상)')+'</span>',c.name+' 금액')+'</span></div>'
+      +'<div class="cc-break">'+(K.sum?'<b>미리 잡힌 돈 '+won(K.sum)+'원</b> · ':'')+esc(cardBreak(a))+'</div>'
+      +(a.short?'<div class="cc-warn">기록한 카드값이 미리 잡힌 돈보다 '+won(-a.other)+'원 적어요. 할부나 카드 고정지출이 겹쳐 적혔거나 끝난 게 남아 있는지 확인해 주세요.</div>':'')
+      +(K.items.length?'<div class="cc-items">'+K.items.map(function(x){return '<span>'+esc(x.k)+' · '+esc(x.name)+(x.sub?' '+x.sub:'')+' <b>'+won(x.amt)+'</b></span>';}).join('')+'</div>':'')
+      +hh+'</div>';
   }).join('');
-  return h+rec+'<div class="grid2 even" style="margin-bottom:14px">'+cards+'</div><div class="panel">'+addCard+'<p class="hint">카드값은 낸 다음에 기록하는 방식이에요. 기록 안 한 달은 지난 기록으로 예상해서 합계에 넣어요.</p></div>';
+  return h+rec+'<div class="grid2 even" style="margin-bottom:14px">'+cards+'</div><div class="panel">'+addCard+'<p class="hint">카드값은 낸 다음에 기록하는 방식이에요. 기록 안 한 달은 그 달 할부와 카드로 나가는 고정지출을 먼저 잡고, 그 외 사용은 지난 기록을 보고 예상해요. 할부·카드 고정지출은 카드값 안에서만 세서 합계에 두 번 들어가지 않아요.</p></div>';
 }
 
 /* ── 할부 ── */
@@ -975,7 +1005,7 @@ function addFrom(kind,f){
   else if(kind==='inonce'){if(!req(f,['name','day','amt']))return;var oa=num(g('amt')),od=parseDay(g('day'));if(isNaN(oa)||isNaN(od))return bad();
     mut(function(){mw(ym).inOnce.push({id:id,name:g('name'),day:od,amt:oa});},'"'+g('name')+'" 들어온 돈에 넣었어요');}
   else if(kind==='once'||kind==='tax'){if(!req(f,kind==='tax'?['amt']:['name','day','amt']))return;var a=num(g('amt')),d=parseDay(g('day'));if(isNaN(a)||isNaN(d))return bad();
-    mut(function(){mw(ym).once.push({id:id,name:g('name'),cat:kind==='tax'?'세금':'이번 달만',day:d,amt:a});},'"'+g('name')+'" 이번 달 나가는 돈에 넣었어요');if(kind==='tax')after='once';}
+    mut(function(){mw(ym).once.push({id:id,name:g('name'),cat:kind==='tax'?'세금':'이번 달만',day:d,amt:a,from:g('from')});},'"'+g('name')+'" 이번 달 나가는 돈에 넣었어요');if(kind==='tax')after='once';}
   else if(kind==='loan'){if(!req(f,['name','P','rate','n','day']))return;var P=num(g('P')),rate=parseFloat(g('rate').replace(/[^\d.]/g,'')),n=num(g('n')),dd=parseDay(g('day')),st=parseYm(g('start')||ym);
     if(isNaN(P)||P<1||isNaN(rate)||isNaN(n)||n<1||isNaN(dd))return bad();if(!st)return bad('첫 상환 달을 2026-03처럼 적어주세요');
     mut(function(){S.loans.push({id:id,name:g('name'),bank:g('bank'),P:P,rate:rate,n:n,day:dd,start:st,method:g('method')||'equal',viaFixed:!!(f.elements.viaFixed&&f.elements.viaFixed.checked)});W.loanSel=id;W.loanForm=false;},'"'+g('name')+'" 대출을 추가했어요');after=null;}
