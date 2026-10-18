@@ -193,6 +193,12 @@ select.in{padding-right:24px;-webkit-appearance:none;appearance:none;background-
 .cc-items{display:flex;flex-wrap:wrap;gap:5px;padding:0 18px 12px}
 .cc-items span{font-size:11.5px;color:var(--t2);background:var(--chip);border-radius:7px;padding:3px 8px;white-space:nowrap}
 .cc-items b{color:var(--text);font-weight:700}
+.mix{display:flex;height:14px;border-radius:99px;overflow:hidden;margin:0 18px 12px;background:var(--chip)}
+.mix i{display:block;height:100%}
+.mix-lg{display:flex;flex-wrap:wrap;gap:6px 14px;padding:0 18px 14px;font-size:12px;color:var(--t2)}
+.mix-lg span{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.mix-lg i{width:9px;height:9px;border-radius:3px;display:inline-block}
+.mix-lg b{color:var(--text)}
 .mrow{display:flex;align-items:center;gap:10px;padding:8px 18px;border-top:1px solid var(--line);font-size:13px}
 .mrow .mm{width:52px;color:var(--t2);font-weight:600;flex:0 0 auto;white-space:nowrap}
 .mrow .mbar{flex:1;height:6px;border-radius:99px;background:var(--chip);overflow:hidden}
@@ -321,6 +327,7 @@ select.in{padding-right:24px;-webkit-appearance:none;appearance:none;background-
     <button type="button" data-act="tab" data-tab="card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20"/></svg><span class="lb">카드값</span><span class="ls">카드</span><kbd>4</kbd></button>
     <button type="button" data-act="tab" data-tab="inst"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg><span class="lb">할부</span><span class="ls">할부</span><kbd>5</kbd></button>
     <button type="button" data-act="tab" data-tab="settle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10h13l-4-4M17 14H4l4 4"/></svg><span class="lb">정산</span><span class="ls">정산</span><kbd>6</kbd></button>
+    <button type="button" data-act="tab" data-tab="save"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6"/><path d="M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6"/></svg><span class="lb">저축 · 투자</span><span class="ls">저축</span><kbd>7</kbd></button>
     <div class="nav-foot">
       <button type="button" class="lnk" data-act="sheet" data-v="1"><span class="lb">데이터 · 백업</span><span class="ls">백업</span></button>
       <span id="navver"></span>
@@ -351,9 +358,9 @@ select.in{padding-right:24px;-webkit-appearance:none;appearance:none;background-
 
 <script>
 'use strict';
-var APP_VER='2026.10.18e';
-var TABS=['month','loan','fixed','card','inst','settle'];
-var TAB_NAME={month:'이번 달',loan:'대출 · 받을 돈',fixed:'고정지출 · 수입 · 세금',card:'카드값',inst:'할부',settle:'정산'};
+var APP_VER='2026.10.18f';
+var TABS=['month','loan','fixed','card','inst','settle','save'];
+var TAB_NAME={month:'이번 달',loan:'대출 · 받을 돈',fixed:'고정지출 · 수입 · 세금',card:'카드값',inst:'할부',settle:'정산',save:'저축 · 투자'};
 var METHOD={equal:'매달 같은 금액',prin:'원금 똑같이',bullet:'이자만, 끝에 원금'};
 var CAT_EMO={'주거':'🏠','관리비':'🏠','공과금':'💡','통신':'📱','구독':'🔁','구독료':'🔁','구독,통신':'🔁','보험':'🛡️','저축':'🐷','적금':'🐷','투자':'📈','투자비':'📈','가족':'👨‍👩‍👧','용돈':'💌','대출':'🏦','대출이자':'💸','교통':'🚌','교통비':'🚌','차량':'🚗','세금':'💲','식비':'🍚','카페':'☕','간식':'🍪','생활비':'🛒','생활용품':'🧼','필수품':'🧻','의료':'🩺','병원':'🩺','패션':'👚','의류':'👕','뷰티':'💄','뷰티케어':'💄','바디케어':'🛁','경조사':'🎁','경조사비':'🎁','교육':'📚','강의':'📚','문구':'🖊️','전자물품':'💻','가구용품':'🛋️','제품':'📦','카드':'💳','카드대금':'💰','급여':'💰','월급':'💰','정산':'🔄','이번 달만':'🗓️','반려동물':'🐶','운동':'🏃','여행':'✈️','기타':'📌'};
 var CATS=['주거','공과금','통신','구독','보험','대출','저축','투자','가족','교통','차량','식비','생활비','의료','교육','경조사','세금','기타'];
@@ -398,10 +405,10 @@ function parseYmLoose(s,base){var y=parseYm(s);if(y)return y;var m=String(s).mat
 function parseCnt(s){s=String(s).trim();if(!s||/매달|없/.test(s))return {k:0,of:0,empty:true};var m=s.match(/(\d+)\s*(?:\/\s*(\d+))?/);if(!m)return null;return {k:Math.max(0,+m[1]),of:m[2]?+m[2]:0};}
 
 /* ── 저장 ── */
-function blank(){return {v:1,loans:[],lends:[],debts:[],fixed:[],incomes:[],cards:[],insts:[],partner:{name:'오빠',me:'나',day:5},sItems:[],taxSet:{car:false,house:false,biz:false},months:{}};}
+function blank(){return {v:1,loans:[],lends:[],debts:[],saves:[],fixed:[],incomes:[],cards:[],insts:[],partner:{name:'오빠',me:'나',day:5},sItems:[],taxSet:{car:false,house:false,biz:false},months:{}};}
 function normalize(d){
   var b=blank(); if(!d||typeof d!=='object') return b;
-  ['loans','lends','debts','fixed','incomes','cards','insts','sItems'].forEach(function(k){if(Array.isArray(d[k]))b[k]=d[k].filter(function(x){return x&&x.id;});});
+  ['loans','lends','debts','saves','fixed','incomes','cards','insts','sItems'].forEach(function(k){if(Array.isArray(d[k]))b[k]=d[k].filter(function(x){return x&&x.id;});});
   if(d.partner&&typeof d.partner==='object')b.partner={name:d.partner.name||'오빠',me:d.partner.me||'나',day:+d.partner.day||5};
   if(d.taxSet)b.taxSet={car:!!d.taxSet.car,house:!!d.taxSet.house,biz:!!d.taxSet.biz};
   if(d.months&&typeof d.months==='object')b.months=d.months;
@@ -424,11 +431,11 @@ var HIST=[], pendingRender=false;
 function snap(){HIST.push(JSON.stringify(S));if(HIST.length>40)HIST.shift();}
 function undo(){if(!HIST.length){toast('되돌릴 게 없어요');return;}S=normalize(JSON.parse(HIST.pop()));save();render();toast('되돌렸어요');}
 function mut(fn,msg){snap();fn();save();render();if(msg)toast(msg,true);}
-function hasData(s){s=s||S;return !!(s.loans.length||s.lends.length||s.debts.length||s.fixed.length||s.incomes.length||s.cards.length||s.insts.length||s.sItems.length||Object.keys(s.months).some(function(k){var m=s.months[k];return m&&m.once&&m.once.length;}));}
+function hasData(s){s=s||S;return !!(s.loans.length||s.lends.length||s.debts.length||s.saves.length||s.fixed.length||s.incomes.length||s.cards.length||s.insts.length||s.sItems.length||Object.keys(s.months).some(function(k){var m=s.months[k];return m&&m.once&&m.once.length;}));}
 
 /* ── 달별 기록 ── */
-function mo(ym){var m=S.months[ym]||{};return {paid:m.paid||{},amt:m.amt||{},once:m.once||[],inOnce:m.inOnce||[],got:m.got||{},chk:m.chk||{},settled:m.settled||null};}
-function mw(ym){var m=S.months[ym];if(!m)m=S.months[ym]={};['paid','amt','got'].forEach(function(k){if(!m[k]||typeof m[k]!=='object')m[k]={};});if(!Array.isArray(m.once))m.once=[];if(!Array.isArray(m.inOnce))m.inOnce=[];if(!m.chk||typeof m.chk!=='object')m.chk={};if(m.settled===undefined)m.settled=null;return m;}
+function mo(ym){var m=S.months[ym]||{};return {paid:m.paid||{},amt:m.amt||{},once:m.once||[],inOnce:m.inOnce||[],got:m.got||{},chk:m.chk||{},sav:m.sav||{},settled:m.settled||null};}
+function mw(ym){var m=S.months[ym];if(!m)m=S.months[ym]={};['paid','amt','got'].forEach(function(k){if(!m[k]||typeof m[k]!=='object')m[k]={};});if(!Array.isArray(m.once))m.once=[];if(!Array.isArray(m.inOnce))m.inOnce=[];if(!m.chk||typeof m.chk!=='object')m.chk={};if(!m.sav||typeof m.sav!=='object')m.sav={};if(m.settled===undefined)m.settled=null;return m;}
 
 /* ── 계산 ── */
 var schedCache={};
@@ -533,6 +540,31 @@ function debtState(D,ym){
   if(start0<=0&&!res.end)res.end=D.start;
   return res;
 }
+/* 저축·투자. saves=[{id,name,kind save|invest|stock,monthly,day,start,end,base,from,value,valueAt,trades,prices}]
+   넣은 돈 = 이미 모은 돈 + 날짜 지난 달마다 넣는 돈(그 달만 고친 금액 amt['sav:id']) + 한 번 넣기·빼기(m.sav[id]) */
+var SAVE_KIND={save:'저축',invest:'투자',stock:'주식 계좌'};
+function saveOn(s,ym){return (+s.monthly||0)>0&&s.start&&ymDiff(s.start,ym)>=0&&(!s.end||ymDiff(ym,s.end)>=0);}
+function saveAmt(s,ym){var ov=mo(ym).amt['sav:'+s.id];return ov!=null?+ov:+s.monthly||0;}
+function stockHold(s){
+  var by={},spent=0,got=0;
+  (s.trades||[]).forEach(function(t){var q=+t.qty||0,pr=+t.price||0,hh=by[t.name]||(by[t.name]={name:t.name,qty:0,cost:0});
+    if(q>0){hh.cost+=q*pr;hh.qty+=q;spent+=q*pr;}
+    else if(q<0){var sq=Math.min(-q,hh.qty),avg=hh.qty?hh.cost/hh.qty:0;hh.cost-=avg*sq;hh.qty-=sq;got+=(-q)*pr;}});
+  var val=0,cost=0,list=Object.keys(by).map(function(k){var hh=by[k],ps=(s.prices||{})[k],cur=ps!=null&&ps!==''?+ps:(hh.qty?hh.cost/hh.qty:0),v=hh.qty*cur;val+=v;cost+=hh.cost;
+    return {name:k,qty:hh.qty,avg:hh.qty?hh.cost/hh.qty:0,cur:cur,val:v,gain:v-hh.cost,pct:hh.cost?Math.round((v-hh.cost)/hh.cost*1000)/10:0,curSet:ps!=null&&ps!==''};}).filter(function(x){return x.qty>1e-9;});
+  return {list:list,val:val,cost:cost,spent:spent,got:got};
+}
+function saveState(s,ym){
+  var put=+s.base||0,thisMonthly=0,thisExtra=0,m=s.start||ym,g=0;
+  if(+s.monthly>0&&s.start){while(ymDiff(m,ym)>=0&&g++<600){if(saveOn(s,m)){var a=saveAmt(s,m);if(m===ym)thisMonthly=a;if(ymDiff(m,ym)>0||passed(m,+s.day||1))put+=a;}m=ymAdd(m,1);}}
+  Object.keys(S.months).forEach(function(k){if(ymDiff(k,ym)<0)return;((S.months[k].sav||{})[s.id]||[]).forEach(function(e){put+=+e.amt||0;if(k===ym)thisExtra+=+e.amt||0;});});
+  var r={put:put,thisMonthly:thisMonthly,thisExtra:thisExtra};
+  if(s.kind==='stock'){var hd=stockHold(s);r.hold=hd.list;r.cash=put-hd.spent+hd.got;r.value=hd.val+r.cash;}
+  else if(s.kind==='invest'){r.value=(+s.value>0)?+s.value:put;}
+  else r.value=put;
+  r.gain=r.value-put;r.pct=put?Math.round(r.gain/put*1000)/10:0;
+  return r;
+}
 function sK(it,ym){var k=ymDiff(it.start,ym)+1;if(k<1)return 0;if(+it.of&&k>+it.of)return 0;return k;}
 function settleOf(ym){
   var ins=[],outs=[],si=0,so=0;
@@ -566,6 +598,9 @@ function outRows(ym){
   m.once.forEach(function(o){var key='once:'+o.id,cd=cardOf(o.from);
     rows.push({key:key,kind:'once',id:o.id,name:o.name,cat:o.cat||'이번 달만',day:+o.day||1,amt:+o.amt||0,paid:!!m.paid[key],src:o.from||'',inCard:cd?cd.name:'',excl:!!cd,spec:'once|'+o.id+'|amt|num',raw:+o.amt||0});});
   var prev=ymAdd(ym,-1),sp=settleOf(prev);
+  S.saves.forEach(function(s){var ck=s.kind==='save'?'저축':'투자';
+    if(saveOn(s,ym)){var sa=saveAmt(s,ym);rows.push({key:'sav:'+s.id,kind:'save',name:s.name+' 넣기',cat:ck,day:+s.day||1,amt:sa,src:s.from||'',sub:(s.from?s.from+'에서 · ':'')+SAVE_KIND[s.kind||'save'],spec:'mamt|sav:'+s.id+'||num',raw:sa});}
+    ((m.sav||{})[s.id]||[]).forEach(function(e){if(+e.amt>0)rows.push({key:'savx:'+e.id,kind:'save',name:s.name+' 넣기'+(e.memo?' ('+e.memo+')':''),cat:ck,day:+e.d||1,amt:+e.amt,src:s.from||'',sub:'한 번 넣기'});});});
   if(sp.has&&sp.net<0) rows.push({key:'settle',kind:'settleout',name:S.partner.name+'에게 정산 ('+mLabel(prev)+'분)',cat:'정산',day:+S.partner.day||5,amt:-sp.net,paid:!!sp.settled,prevYm:prev});
   rows.forEach(function(r){r.paid=passed(ym,r.day);});
   rows.sort(function(a,b){return a.day-b.day;});
@@ -581,6 +616,7 @@ function inRows(ym){
   S.lends.forEach(function(l){var s=lendAt(l,ym);if(!s.expected)return;
     var dsub=s.thisDebt?(s.debt.who||l.who)+'한테 줄 돈에서 '+won(s.thisDebt)+'원 깜'+(s.thisCash?' · 나머지만 현금':' · 현금 아님'):'';
     rows.push({kind:'lend',key:'lend:'+l.id,name:l.who+' (받을 돈)',day:+l.day||1,amt:s.thisCash,got:s.thisGot,cut:s.thisDebt,sub:dsub||(s.open?'매달':(s.thisGot?s.cnt:s.cnt+1)+'회차')});});
+  S.saves.forEach(function(s){((m.sav||{})[s.id]||[]).forEach(function(e){if(+e.amt<0)rows.push({kind:'saveout',key:'savx:'+e.id,name:s.name+'에서 뺌'+(e.memo?' ('+e.memo+')':''),day:+e.d||1,amt:-e.amt,sub:'저축·투자에서 꺼냄'});});});
   rows.forEach(function(r){r.got=passed(ym,r.day);});
   rows.sort(function(a,b){return a.day-b.day;});
   return rows;
@@ -606,6 +642,7 @@ function welcome(){
    +'<button type="button" class="wcard" data-act="goto" data-tab="loan"><b>대출 추가</b><span>원금·이자·다 갚는 날 계산</span></button>'
    +'<button type="button" class="wcard" data-act="goto" data-tab="card"><b>카드 추가</b><span>낸 카드값 카드별 기록</span></button>'
    +'<button type="button" class="wcard" data-act="goto" data-tab="fixed"><b>수입 적기</b><span>월급·부수입 (고정지출 화면 아래)</span></button>'
+   +'<button type="button" class="wcard" data-act="goto" data-tab="save"><b>저축 · 투자 적기</b><span>적금·청약·주식 계좌</span></button>'
    +'<button type="button" class="wcard" data-act="goto" data-tab="settle"><b>정산 항목 적기</b><span>오고가는 돈 매달 정산</span></button>'
    +'</div><div class="chips"><button type="button" class="btn sm" data-act="demo">예시 데이터로 둘러보기</button></div>'
    +(CLOUD.user?'<p class="small t3" style="margin:14px 0 0">'+esc(CLOUD.user.email||'로그인됨')+'로 로그인했어요. 적는 내용은 클라우드에 자동 저장돼요.</p>'
@@ -631,7 +668,7 @@ function vMonth(){
     if(r.kind==='fixed'){if(r.every>1)tag+=' <span class="badge gray">'+EVERY[r.every]+'</span>';if(r.vary)tag+=' <span class="badge warn">변동</span>';sub=(r.src?r.src+'에서':'')+(r.ov?(r.src?' · ':'')+'평소 '+won(r.usual)+'원':'');}
     if(r.kind==='card'){sub=r.none?'금액을 눌러 적어주세요':(r.est?'예상: ':'')+cardBreak(r.ca);}
     if(r.kind==='once'&&r.src)sub=r.src+'에서';
-    if(r.kind==='chkcard')sub=r.sub;
+    if(r.kind==='chkcard'||r.kind==='save')sub=r.sub;
     if(r.kind==='once'&&r.cat==='세금')tag=' <span class="badge gray">세금</span>';
     var amtTxt=r.kind==='card'&&r.none?'<span class="t3">금액 입력</span>':(r.kind==='card'&&r.est?'<span class="t3">'+won(r.amt)+'</span>':won(r.amt));
     var amtCell=r.spec?ed(r.spec,r.raw,amtTxt,'r amt',r.name+' 금액'):'<td class="r amt">'+won(r.amt)+'</td>';
@@ -648,7 +685,7 @@ function vMonth(){
       :'<div class="empty">'+mLabel(ym)+'에 나갈 돈이 아직 없어요</div>')
     +'<form class="addf" data-form="once"><span class="lbl">이번 달만 나가는 돈 (세금·경조사 등)</span><input class="in w-name" name="name" placeholder="내용" autocomplete="off"><input class="in w-day" name="day" placeholder="날짜 (예: 20)" autocomplete="off"><input class="in w-amt" name="amt" placeholder="금액" inputmode="numeric" autocomplete="off"><input class="in w-sm" name="from" placeholder="빠져나가는 곳" list="dl-from-m" autocomplete="off"><datalist id="dl-from-m">'+fromList().map(function(c){return '<option value="'+esc(c)+'">';}).join('')+'</datalist><button class="btn save" type="submit">추가</button></form>'
     +'<p class="hint">카드로 낸 건 빠져나가는 곳에 카드 이름을 적으면 그 카드값에 들어간 걸로 보고 두 번 세지 않아요. 금액을 누르면 이번 달 금액만 바로 고칠 수 있어요. 관리비·전기처럼 달마다 다른 건 고지서 나오면 여기서 고치세요.</p></div>';
-  var cats=[['loan','대출'],['fixed','고정지출'],['card','신용카드값'],['chkcard','체크카드'],['once','이번 달만'],['settleout','정산']].map(function(c){
+  var cats=[['loan','대출'],['fixed','고정지출'],['card','신용카드값'],['chkcard','체크카드'],['save','저축·투자'],['once','이번 달만'],['settleout','정산']].map(function(c){
     var s=0,n=0,p=0;cnt.forEach(function(r){if(r.kind===c[0]){s+=r.amt;n++;if(r.paid)p++;}});
     return n?'<tr><td class="nm">'+c[1]+'</td><td class="t2">'+n+'건 중 '+p+'건 나감</td><td class="r amt">'+won(s)+'원</td></tr>':'';}).join('');
   var instAll=S.cards.reduce(function(a,c){return a+instForCard(c.id,ym);},0);
@@ -930,6 +967,59 @@ function vSettle(){
   return h+'<div class="grid2"><div class="col">'+sTable('in')+sTable('out')+'</div><div class="col">'+sum+'<div class="panel"><div class="ph"><span class="t">지난 정산 기록</span></div>'+histT+'</div></div></div>';
 }
 
+
+/* ── 저축 · 투자 ── */
+var SAVE_COL=['#1C1C1F','#0E9E72','#C9A15A','#8A8D93','#7FC8A9','#8A5A14','#5E6168','#B8BBC1','#3E7D5E','#A88B5C'];
+function signWon(n){return (n>=0?'+':'-')+won(Math.abs(n));}
+function vSave(){
+  var ym=W.ym,totV=0,totP=0,sv=0,iv=0,ip=0,thisIn=0,parts=[];
+  var states=S.saves.map(function(s){var st=saveState(s,ym);totV+=st.value;totP+=st.put;if(s.kind==='save')sv+=st.value;else{iv+=st.value;ip+=st.put;}thisIn+=st.thisMonthly+Math.max(0,st.thisExtra);
+    if(s.kind==='stock'){st.hold.forEach(function(x){if(x.val>0)parts.push({n:s.name+' · '+x.name,v:x.val});});if(st.cash>0)parts.push({n:s.name+' · 현금',v:st.cash});}
+    else if(st.value>0)parts.push({n:s.name,v:st.value});
+    return {s:s,st:st};});
+  var h='<div class="stats">'+stat(mLabel(ym)+' 기준 모은 돈',won(totV)+'원','넣은 돈 '+won(totP)+' · 늘어난 돈 '+signWon(totV-totP),'dark')
+    +stat('저축',won(sv)+'원',states.filter(function(x){return x.s.kind==='save';}).length+'개','','ok')
+    +stat('투자 평가',won(iv)+'원',ip?'수익 '+signWon(iv-ip)+' ('+(ip?(Math.round((iv-ip)/ip*1000)/10):0)+'%)':'',' ',iv-ip>=0?'':'red')
+    +stat(mLabel(ym)+'에 넣는 돈',won(thisIn)+'원','이번 달 나가는 돈에 들어가요')+'</div>';
+  var bar='';
+  if(parts.length&&totV>0){parts.sort(function(a,b){return b.v-a.v;});
+    bar='<div class="panel" style="margin-bottom:14px"><div class="ph"><span class="t">모은 돈 나눠 보기</span></div><div class="mix">'+parts.map(function(x,i){return '<i style="width:'+(x.v/totV*100)+'%;background:'+SAVE_COL[i%SAVE_COL.length]+'"></i>';}).join('')+'</div>'
+      +'<div class="mix-lg">'+parts.map(function(x,i){return '<span><i style="background:'+SAVE_COL[i%SAVE_COL.length]+'"></i>'+esc(x.n)+' <b>'+Math.round(x.v/totV*1000)/10+'%</b> '+won(x.v)+'</span>';}).join('')+'</div></div>';}
+  var fixSave=S.fixed.filter(function(f){return /저축|적금|청약|투자|예금/.test((f.cat||'')+' '+f.name);});
+  var move=fixSave.length?'<div class="demo-bar"><span>고정지출에 저축처럼 보이는 게 있어요: '+fixSave.map(function(f){return esc(f.name);}).join(', ')+'. 여기 저축 칸으로 옮기면 두 번 안 세요.</span><span class="chips">'+fixSave.map(function(f){return '<button type="button" class="btn sm" data-act="fix2save" data-id="'+esc(f.id)+'">'+esc(f.name)+' 옮기기</button>';}).join('')+'</span></div>':'';
+  var saveRows=states.filter(function(x){return x.s.kind==='save';}).map(function(x){var s=x.s,st=x.st,sp='saves|'+s.id+'|';
+    return '<tr class="'+(s.end&&ymDiff(s.end,ym)>0?'off':'')+'"><td class="c-name">'+eds(sp+'name|text',s.name,'<span class="nm">'+esc(s.name)+'</span>','이름')+'<div class="sb">'+eds(sp+'from|textopt',s.from||'',s.from?esc(s.from)+'에서':'<span class="t3">어디서 넣는지 적기</span>','빠져나가는 통장')+'</div></td>'
+      +ed(sp+'monthly|numopt',+s.monthly||'',+s.monthly?won(s.monthly):'<span class="t3">—</span>','r','매달 넣는 돈')
+      +ed(sp+'day|day',dayRaw(+s.day||1),dayLabel(+s.day||1),'t2 hm')
+      +ed(sp+'end|ymopt',s.end||'',s.end?ymShort(s.end)+' 만기':'<span class="t3">만기 없음</span>','t2 hm nw','만기 달')
+      +'<td class="r amt">'+won(st.value)+(+s.base?'<div class="small t3">처음 '+won(s.base)+'</div>':'')+'</td><td class="r">'+del('saves',s.id,s.name)+'</td></tr>';}).join('');
+  var savePanel='<div class="panel" style="margin-bottom:14px"><div class="ph"><span class="t">저축 통장</span><span class="small t3">적금 · 청약 · 비상금</span></div>'
+    +(saveRows?'<div class="tw"><table class="tbl"><thead><tr><th>이름</th><th class="r">매달</th><th class="hm">넣는 날</th><th class="hm">만기</th><th class="r">모은 돈</th><th></th></tr></thead><tbody>'+saveRows+'</tbody></table></div>':'<div class="empty small">적금, 청약, 비상금 통장처럼 모으는 돈을 적어주세요</div>')+'</div>';
+  var invPanels=states.filter(function(x){return x.s.kind!=='save';}).map(function(x){var s=x.s,st=x.st,sp='saves|'+s.id+'|';
+    var head='<div class="cc-head"><span class="cc-chip '+(s.kind==='stock'?'c1':'c2')+'"></span><div class="bd"><div class="cc-nm">'+eds(sp+'name|text',s.name,esc(s.name),'이름')+' <span class="badge gray">'+SAVE_KIND[s.kind]+'</span></div><div class="cc-sub">매달 '+eds(sp+'monthly|numopt',+s.monthly||'',+s.monthly?won(s.monthly)+'원':'안 넣음','매달 넣는 돈')+' · '+eds(sp+'day|day',dayRaw(+s.day||1),dayLabel(+s.day||1),'넣는 날')+(s.from?' · '+esc(s.from)+'에서':'')+'</div></div>'+del('saves',s.id,s.name)+'</div>';
+    var now='<div class="cc-now"><span class="k">'+(s.kind==='stock'?'평가 금액':'지금 금액')+'</span><span class="v">'+(s.kind==='invest'?eds(sp+'value|numopt',+s.value||'',won(st.value)+'원','지금 금액'):won(st.value)+'원')+'</span><span class="'+(st.gain>=0?'plus':'minus')+' small" style="font-weight:800">'+signWon(st.gain)+' ('+st.pct+'%)</span></div>'
+      +'<div class="cc-break">넣은 돈 '+won(st.put)+'원'+(s.kind==='invest'?(s.valueAt?' · 지금 금액은 '+esc(s.valueAt.slice(5).replace('-','/'))+' 기준 (눌러서 고치기)':' · 지금 금액을 눌러 적으면 수익이 나와요'):'')+(s.kind==='stock'?' · 남은 현금 '+won(st.cash)+'원':'')+'</div>';
+    var body='';
+    if(s.kind==='stock'){
+      var hr=st.hold.map(function(x){return '<tr><td class="nm">'+esc(x.name)+'</td><td class="r">'+(Math.round(x.qty*10000)/10000)+'주</td><td class="r hm">'+won(x.avg)+'</td>'+ed('sprice|'+s.id+'|'+x.name+'|num',x.curSet?x.cur:'',x.curSet?won(x.cur):'<span class="t3">'+won(x.cur)+'</span>','r','지금 가격')+'<td class="r amt">'+won(x.val)+'<div class="small '+(x.gain>=0?'plus':'minus')+'">'+signWon(x.gain)+' ('+x.pct+'%)</div></td></tr>';}).join('');
+      var tr=(s.trades||[]).slice(-5).reverse().map(function(t){return '<span>'+esc(ymShort(t.ym||ym))+' '+esc(t.name)+' '+(+t.qty>0?'삼':'팜')+' '+Math.abs(+t.qty)+'주 × '+won(t.price)+' '+del('trade',t.id,t.name+' 기록')+'</span>';}).join('');
+      var names=st.hold.map(function(x){return '<option value="'+esc(x.name)+'">';}).join('');
+      body=(hr?'<div class="tw"><table class="tbl"><thead><tr><th>종목</th><th class="r">수량</th><th class="r hm">평균 산 값</th><th class="r">지금 가격</th><th class="r">평가</th></tr></thead><tbody>'+hr+'</tbody></table></div>':'<div class="cc-break">산 종목을 아래에 적으면 평가 금액과 수익률이 나와요.</div>')
+        +'<form class="addf" data-form="trade"><input type="hidden" name="saveId" value="'+esc(s.id)+'"><input class="in w-name" name="name" placeholder="종목 (예: 삼성전자)" list="dl-st-'+esc(s.id)+'" autocomplete="off"><datalist id="dl-st-'+esc(s.id)+'">'+names+'</datalist><select class="in w-sm" name="side" aria-label="사기 팔기"><option value="buy">샀어요</option><option value="sell">팔았어요</option></select><input class="in w-day" name="qty" placeholder="몇 주" inputmode="decimal" autocomplete="off"><input class="in w-amt" name="price" placeholder="1주 가격" inputmode="decimal" autocomplete="off"><button class="btn save" type="submit">적기</button></form>'
+        +(tr?'<div class="cc-items" style="padding-top:10px">'+tr+'</div>':'')+'<p class="hint">지금 가격을 눌러 고치면 평가 금액이 바뀌어요. 안 고치면 산 가격으로 계산해요.</p>';
+    }
+    return '<div class="panel">'+head+now+body+'</div>';}).join('');
+  var all=S.saves.map(function(s){return '<option value="'+esc(s.id)+'">'+esc(s.name)+'</option>';}).join('');
+  var ex=S.saves.map(function(s){return ((mo(ym).sav||{})[s.id]||[]).map(function(e){return {s:s,e:e};});}).reduce(function(a,b){return a.concat(b);},[]);
+  var exPanel='<div class="panel" style="margin-top:14px"><div class="ph"><span class="t">'+mLabel(ym)+' 한 번 넣기 · 빼기</span></div>'
+    +(ex.length?'<div class="tw"><table class="tbl"><tbody>'+ex.map(function(x){return '<tr><td class="t2 nw">'+dayLabel(+x.e.d||1)+'</td><td class="c-name"><span class="nm">'+esc(x.s.name)+'</span>'+(x.e.memo?'<div class="sb">'+esc(x.e.memo)+'</div>':'')+'</td><td class="r amt '+(+x.e.amt>=0?'':'minus')+'">'+(+x.e.amt>=0?'넣음 ':'뺌 ')+won(Math.abs(x.e.amt))+'</td><td class="r">'+del('savx',x.e.id,x.s.name)+'</td></tr>';}).join('')+'</tbody></table></div>':'')
+    +(S.saves.length?'<form class="addf" data-form="savx"><select class="in w-sm" name="saveId" aria-label="어디에">'+all+'</select><select class="in w-sm" name="side" aria-label="넣기 빼기"><option value="in">넣었어요</option><option value="out">뺐어요</option></select><input class="in w-amt" name="amt" placeholder="금액" inputmode="numeric" autocomplete="off"><input class="in w-name" name="memo" placeholder="메모 (선택)" autocomplete="off"><input class="in w-day" name="day" placeholder="'+(ym===CUR?'날짜 (오늘)':'날짜')+'" autocomplete="off"><button class="btn save" type="submit">적기</button></form>':'<div class="empty small">저축이나 투자를 먼저 추가해 주세요</div>')
+    +'<p class="hint">보너스를 넣거나 비상금을 꺼냈을 때 적어요. 넣은 건 이번 달 나가는 돈에, 뺀 건 들어오는 돈에 들어가요.</p></div>';
+  var add='<div class="panel" style="margin-top:14px"><div class="ph"><span class="t">저축 · 투자 추가</span></div><form class="addf" data-form="save" style="border-top:none;background:var(--card)"><input class="in w-name" name="name" placeholder="이름 (예: 청년도약계좌)" autocomplete="off"><select class="in w-sm" name="kind" aria-label="종류"><option value="save">저축 (적금·청약)</option><option value="invest">투자 (금액만)</option><option value="stock">주식 계좌 (종목별)</option></select><input class="in w-amt" name="monthly" placeholder="매달 넣는 돈 (선택)" inputmode="numeric" autocomplete="off"><input class="in w-day" name="day" placeholder="넣는 날" autocomplete="off"><input class="in w-amt" name="base" placeholder="지금까지 모은 돈 (선택)" inputmode="numeric" autocomplete="off"><input class="in w-sm" name="from" placeholder="빠져나가는 통장" list="dl-from-s" autocomplete="off"><datalist id="dl-from-s">'+fromList().map(function(x){return '<option value="'+esc(x)+'">';}).join('')+'</datalist><button class="btn save" type="submit">추가</button></form>'
+    +'<p class="hint">매달 넣는 돈은 넣는 날이 지나면 모은 돈에 쌓이고, 이번 달 나가는 돈에도 「저축·투자」로 들어가요. 지금까지 모은 돈을 적으면 거기서부터 쌓여요.</p></div>';
+  return h+move+bar+'<div class="grid2 even">'+'<div class="col">'+savePanel+exPanel+'</div><div class="col">'+(invPanels||'<div class="panel"><div class="empty small">투자 계좌가 없어요. 아래에서 「투자」나 「주식 계좌」로 추가해 주세요</div></div>')+'</div></div>'+add;
+}
+
 /* ── 데이터 창 ── */
 function renderSheet(){
   var root=document.getElementById('sheetRoot');
@@ -949,7 +1039,7 @@ function renderSheet(){
     +'<button type="button" class="sh-item" data-act="import"><b>백업 불러오기</b><span>저장해 둔 파일로 바꿔요</span></button>'
     +'<button type="button" class="sh-item" data-act="demo"><b>예시 데이터 넣기</b><span>어떻게 보이는지 둘러봐요</span></button>'
     +'<button type="button" class="sh-item danger" data-act="reset"><b>모두 지우기</b><span>처음 상태로 돌아가요</span></button>'
-    +'</div><div class="sh-foot">컴퓨터 단축키: 1~6 메뉴 · N 새로 적기 · ← → 달 이동 · ⌘Z / Ctrl+Z 되돌리기<br>표의 칸을 누르면 바로 고쳐요 · Enter 저장 · Tab 다음 칸 · Esc 취소<br>버전 '+APP_VER+'</div>'
+    +'</div><div class="sh-foot">컴퓨터 단축키: 1~7 메뉴 · N 새로 적기 · ← → 달 이동 · ⌘Z / Ctrl+Z 되돌리기<br>표의 칸을 누르면 바로 고쳐요 · Enter 저장 · Tab 다음 칸 · Esc 취소<br>버전 '+APP_VER+'</div>'
     +'</div></div>';
 }
 
@@ -985,7 +1075,7 @@ function loadDemo(){snap();S=demoData();save();W.ym=CUR;W.loanSel=null;W.sheet=f
 /* ── 그리기 ── */
 function render(){
   pendingRender=false;
-  var fn={month:vMonth,loan:vLoan,fixed:vFixed,card:vCard,inst:vInst,settle:vSettle}[W.tab];
+  var fn={month:vMonth,loan:vLoan,fixed:vFixed,card:vCard,inst:vInst,settle:vSettle,save:vSave}[W.tab];
   document.getElementById('view').innerHTML=(S.demo?demoBar():'')+fn();
   document.querySelectorAll('.nav [data-tab]').forEach(function(b){var on=b.dataset.tab===W.tab;b.classList.toggle('act',on);if(on)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
   document.getElementById('title').textContent=TAB_NAME[W.tab];
@@ -997,7 +1087,7 @@ function go(t){W.tab=t;W.copyText=null;W.filter='all';idbSet('ui',{tab:t}).catch
 function focusForm(kind){var f=document.querySelector('#view form[data-form="'+kind+'"]');if(!f)return false;var i=f.querySelector('input:not([type=hidden]),select');if(i){i.focus();try{f.scrollIntoView({block:'nearest'});}catch(e){}}return true;}
 function focusAdd(){
   if(W.tab==='loan'){if(!W.loanForm){W.loanForm=true;render();}focusForm('loan');return;}
-  var map={month:'once',fixed:'fixed',card:S.cards.length?'cardrec':'card',inst:'inst',settle:'sin'};
+  var map={month:'once',fixed:'fixed',card:S.cards.length?'cardrec':'card',inst:'inst',settle:'sin',save:'save'};
   if(W.tab==='month'&&!hasData()){go('fixed');focusForm('fixed');return;}
   focusForm(map[W.tab]);
 }
@@ -1013,6 +1103,7 @@ function applyEdit(spec,v){
   else if(type==='num'){if(v===''&&coll==='mamt')parsed=null;else{parsed=num(v);if(isNaN(parsed)){toast('숫자로 적어주세요');return false;}if((field==='n'||field==='per')&&parsed<1){toast('1 이상으로 적어주세요');return false;}}}
   else if(type==='rate'){parsed=parseFloat(v.replace(/[^\d.]/g,''));if(isNaN(parsed)){toast('이율을 숫자로 적어주세요');return false;}}
   else if(type==='day'){parsed=parseDay(v);if(isNaN(parsed)){toast('날짜는 1~31 또는 말일로 적어주세요');return false;}}
+  else if(type==='ymopt'){if(v===''){parsed='';}else{parsed=parseYmLoose(v,W.ym);if(!parsed){toast('11월이나 2026-11처럼 적어주세요');return false;}}}
   else if(type==='ym'){parsed=parseYmLoose(v,W.ym);if(!parsed){toast('11월이나 2026-11처럼 적어주세요');return false;}}
   else if(type==='cnt'){parsed=parseCnt(v);if(!parsed){toast('5/12처럼 적어주세요');return false;}if(coll==='insts'&&parsed.empty){toast('몇 회차인지 적어주세요 (아직 안 나갔으면 0)');return false;}}
   else if(type==='textopt'){parsed=v;}
@@ -1020,12 +1111,15 @@ function applyEdit(spec,v){
   snap();
   if(coll==='mamt'){var m=mw(W.ym);if(parsed==null)delete m.amt[id];else m.amt[id]=parsed;}
   else if(coll==='once'||coll==='inonce'){var o=mw(W.ym)[coll==='once'?'once':'inOnce'].find(function(x){return x.id===id;});if(!o){HIST.pop();return false;}o[field]=parsed;}
+  else if(coll==='sprice'){var ssv=S.saves.find(function(x){return x.id===id;});if(!ssv){HIST.pop();return false;}ssv.prices=ssv.prices||{};ssv.prices[field]=parsed;}
   else if(coll==='chkuse'){var ce=null,cm=mw(W.ym).chk;Object.keys(cm).forEach(function(k){cm[k].forEach(function(x){if(x.id===id)ce=x;});});if(!ce){HIST.pop();return false;}ce[field]=parsed;}
   else if(coll==='partner'){S.partner[field]=parsed;}
   else{
     var obj=(S[coll]||[]).find(function(x){return x.id===id;});if(!obj){HIST.pop();return false;}
     if(type==='cnt'){if(parsed.empty){obj.start=W.ym;obj.of=0;}else{obj.start=ymAdd(W.ym,-(parsed.k-1));if(parsed.of){if(coll==='insts')obj.n=parsed.of;else obj.of=parsed.of;}}}
     else obj[field]=parsed;
+    if(coll==='saves'&&field==='value')obj.valueAt=parsed?todayISO():'';
+    if(coll==='saves'&&field==='monthly'&&parsed>0&&!obj.start)obj.start=W.ym;
   }
   save();return true;
 }
@@ -1078,6 +1172,13 @@ function addFrom(kind,f){
   else if(kind==='loan'){if(!req(f,['name','P','rate','n','day']))return;var P=num(g('P')),rate=parseFloat(g('rate').replace(/[^\d.]/g,'')),n=num(g('n')),dd=parseDay(g('day')),st=parseYm(g('start')||ym);
     if(isNaN(P)||P<1||isNaN(rate)||isNaN(n)||n<1||isNaN(dd))return bad();if(!st)return bad('첫 상환 달을 2026-03처럼 적어주세요');
     mut(function(){S.loans.push({id:id,name:g('name'),bank:g('bank'),P:P,rate:rate,n:n,day:dd,start:st,method:g('method')||'equal',viaFixed:!!(f.elements.viaFixed&&f.elements.viaFixed.checked),off:!!(f.elements.off&&f.elements.off.checked)});W.loanSel=id;W.loanForm=false;},'"'+g('name')+'" 대출을 추가했어요');after=null;}
+  else if(kind==='save'){if(!req(f,['name']))return;var smo=g('monthly')?num(g('monthly')):0,sday=g('day')?parseDay(g('day')):1,sbase=g('base')?num(g('base')):0;if(isNaN(smo)||isNaN(sday)||isNaN(sbase))return bad();if(smo>0&&!g('day'))return bad('넣는 날을 적어주세요');
+    mut(function(){S.saves.push({id:id,name:g('name'),kind:g('kind')||'save',monthly:smo,day:sday,start:ym,end:'',base:sbase,from:g('from'),trades:[],prices:{}});},'"'+g('name')+'" 추가했어요');}
+  else if(kind==='savx'){if(!req(f,['amt']))return;var xa=num(g('amt')),xd=g('day')?parseDay(g('day')):(ym===CUR?TODAY_D:1),xs=S.saves.find(function(s){return s.id===g('saveId');});if(!xs||isNaN(xa)||isNaN(xd))return bad();var sgn=g('side')==='out'?-1:1;
+    mut(function(){var m=mw(ym);(m.sav[xs.id]=m.sav[xs.id]||[]).push({id:id,amt:sgn*xa,memo:g('memo'),d:xd});},xs.name+(sgn>0?'에 넣은 돈을':'에서 뺀 돈을')+' 적었어요');}
+  else if(kind==='trade'){if(!req(f,['name','qty','price']))return;var ts=S.saves.find(function(s){return s.id===g('saveId');}),tq=parseFloat(g('qty').replace(/[^\d.]/g,'')),tp=parseFloat(g('price').replace(/[^\d.]/g,''));if(!ts||!(tq>0)||!(tp>=0))return bad();
+    if(g('side')==='sell'){var have=(stockHold(ts).list.find(function(x){return x.name===g('name');})||{qty:0}).qty;if(tq>have+1e-9)return bad('가진 수량('+(Math.round(have*10000)/10000)+'주)보다 많이 팔 수 없어요');}
+    mut(function(){(ts.trades=ts.trades||[]).push({id:id,name:g('name'),qty:g('side')==='sell'?-tq:tq,price:tp,ym:ym});},g('name')+' '+tq+'주 '+(g('side')==='sell'?'판':'산')+' 기록을 적었어요');}
   else if(kind==='debt'){if(!req(f,['who','amt']))return;var da=num(g('amt')),dp=g('pre')?num(g('pre')):0,ds=g('start')?parseYmLoose(g('start'),ym):ym;if(isNaN(da)||isNaN(dp))return bad();if(!ds)return bad('까기 시작 달은 11월이나 2026-11처럼 적어주세요');
     mut(function(){S.debts.push({id:id,who:g('who'),amt:da,lendId:g('lendId'),start:ds,pre:dp});},g('who')+'한테 줄 돈을 적었어요'+(g('lendId')?' · 받을 돈으로 까요':''));}
   else if(kind==='lend'){if(!req(f,['who','per','day']))return;var la=g('amt')?num(g('amt')):0,lp=num(g('per')),ld=parseDay(g('day')),pre=g('pre')?num(g('pre')):0;if(isNaN(la)||isNaN(lp)||lp<1||isNaN(ld)||isNaN(pre))return bad();
@@ -1097,10 +1198,14 @@ function addFrom(kind,f){
 function delItem(coll,id){
   var name='';
   if(coll==='once'||coll==='inonce'){var o=mo(W.ym)[coll==='once'?'once':'inOnce'].find(function(x){return x.id===id;});name=o?o.name:'';}
+  else if(coll==='savx'){var sm0=mo(W.ym).sav;Object.keys(sm0).forEach(function(k){sm0[k].forEach(function(x){if(x.id===id)name=x.memo||'넣기·빼기';});});}
+  else if(coll==='trade'){S.saves.forEach(function(s){(s.trades||[]).forEach(function(t){if(t.id===id)name=t.name+' 기록';});});}
   else if(coll==='chkuse'){var cm0=mo(W.ym).chk;Object.keys(cm0).forEach(function(k){cm0[k].forEach(function(x){if(x.id===id)name=x.memo||'체크카드 사용';});});}
   else{var x=(S[coll]||[]).find(function(x){return x.id===id;});name=x?(x.name||x.who||''):'';}
   mut(function(){
     if(coll==='once'){var m=mw(W.ym);m.once=m.once.filter(function(x){return x.id!==id;});delete m.paid['once:'+id];}
+    else if(coll==='savx'){var m4=mw(W.ym);Object.keys(m4.sav).forEach(function(k){m4.sav[k]=m4.sav[k].filter(function(x){return x.id!==id;});});}
+    else if(coll==='trade'){S.saves.forEach(function(s){s.trades=(s.trades||[]).filter(function(t){return t.id!==id;});});}
     else if(coll==='chkuse'){var m3=mw(W.ym);Object.keys(m3.chk).forEach(function(k){m3.chk[k]=m3.chk[k].filter(function(x){return x.id!==id;});});}
     else if(coll==='inonce'){var m2=mw(W.ym);m2.inOnce=m2.inOnce.filter(function(x){return x.id!==id;});delete m2.got['inonce:'+id];}
     else{S[coll]=S[coll].filter(function(x){return x.id!==id;});if(coll==='loans'&&W.loanSel===id)W.loanSel=null;}
@@ -1157,13 +1262,14 @@ function mergeStates(a,b){
   if(od.demo&&!nw.demo)return nw;
   if(nw.demo&&!od.demo)return od;
   var r=JSON.parse(JSON.stringify(nw));
-  ['loans','lends','debts','fixed','incomes','cards','insts','sItems'].forEach(function(k){var ids={};r[k].forEach(function(x){ids[x.id]=1;});od[k].forEach(function(x){if(!ids[x.id])r[k].push(JSON.parse(JSON.stringify(x)));});});
+  ['loans','lends','debts','saves','fixed','incomes','cards','insts','sItems'].forEach(function(k){var ids={};r[k].forEach(function(x){ids[x.id]=1;});od[k].forEach(function(x){if(!ids[x.id])r[k].push(JSON.parse(JSON.stringify(x)));});});
   Object.keys(od.months).forEach(function(ym){
     var o=od.months[ym]||{},m=r.months[ym]||(r.months[ym]={});
     ['paid','amt','got'].forEach(function(f){m[f]=Object.assign({},o[f]||{},m[f]||{});});
     var ids={};m.once=m.once||[];m.once.forEach(function(x){ids[x.id]=1;});(o.once||[]).forEach(function(x){if(!ids[x.id])m.once.push(x);});
     var ids2={};m.inOnce=m.inOnce||[];m.inOnce.forEach(function(x){ids2[x.id]=1;});(o.inOnce||[]).forEach(function(x){if(!ids2[x.id])m.inOnce.push(x);});
-    m.chk=m.chk||{};Object.keys(o.chk||{}).forEach(function(cid){var arr=m.chk[cid]=m.chk[cid]||[],ids3={};arr.forEach(function(x){ids3[x.id]=1;});(o.chk[cid]||[]).forEach(function(x){if(!ids3[x.id])arr.push(x);});});
+    ['chk','sav'].forEach(function(bk){m[bk]=m[bk]||{};Object.keys(o[bk]||{}).forEach(function(cid){var arr=m[bk][cid]=m[bk][cid]||[],idz={};arr.forEach(function(x){idz[x.id]=1;});(o[bk][cid]||[]).forEach(function(x){if(!idz[x.id])arr.push(x);});});});
+    if(0)Object.keys(o.chk||{}).forEach(function(cid){var arr=m.chk[cid]=m.chk[cid]||[],ids3={};arr.forEach(function(x){ids3[x.id]=1;});(o.chk[cid]||[]).forEach(function(x){if(!ids3[x.id])arr.push(x);});});
     if(!m.settled&&o.settled)m.settled=o.settled;
   });
   return normalize(r);
@@ -1282,6 +1388,7 @@ document.addEventListener('click',function(e){
       case 'reset':W.sheet=true;W.confirm={kind:'reset'};renderSheet();break;
       case 'cyes':runConfirm();break;
       case 'cno':W.confirm=null;renderSheet();break;
+      case 'fix2save':(function(){var fx=S.fixed.find(function(x){return x.id===d.id;});if(!fx)return;mut(function(){S.saves.push({id:uid(),name:fx.name,kind:/투자/.test(fx.cat||'')?'invest':'save',monthly:+fx.amt||0,day:+fx.day||1,start:fx.start||W.ym,end:'',base:0,from:fx.from||'',trades:[],prices:{}});S.fixed=S.fixed.filter(function(x){return x.id!==fx.id;});},'"'+fx.name+'" 저축 칸으로 옮겼어요');})();break;
       case 'cardtype':mut(function(){var c=S.cards.find(function(x){return x.id===d.id;});if(c)c.type=isChk(c)?'credit':'check';},'카드 종류를 바꿨어요');break;
       case 'loanoff':mut(function(){var L=S.loans.find(function(x){return x.id===d.id;});if(L)L.off=d.v==='1';},d.v==='1'?'대출을 꺼뒀어요 · 합계에서 빠져요':'대출을 켰어요 · 첫 상환 달을 확인해 주세요');break;
       case 'viafixed':mut(function(){var L=S.loans.find(function(x){return x.id===d.id;});if(L)L.viaFixed=d.v==='1';},d.v==='1'?'이번 달 합계엔 고정지출 쪽만 넣을게요':'이번 달 합계에 대출 상환을 넣을게요');break;
@@ -1320,7 +1427,7 @@ document.addEventListener('keydown',function(e){
   if((e.metaKey||e.ctrlKey)&&!e.shiftKey&&!e.altKey&&(e.key==='z'||e.key==='Z'||e.code==='KeyZ')&&!typing){e.preventDefault();undo();return;}
   if(typing||e.metaKey||e.ctrlKey||e.altKey)return;
   if(t&&t.classList&&t.classList.contains('ed')&&(e.key==='Enter'||e.key==='F2')){e.preventDefault();startEdit(t);return;}
-  var mm=/^Digit([1-6])$/.exec(e.code||'');
+  var mm=/^Digit([1-7])$/.exec(e.code||'');
   if(mm){e.preventDefault();go(TABS[+mm[1]-1]);return;}
   if(e.code==='KeyN'){e.preventDefault();focusAdd();return;}
   if(e.code==='ArrowLeft'||e.code==='ArrowRight'){if(t&&t.closest&&t.closest('.tw'))return;e.preventDefault();W.ym=ymAdd(W.ym,e.code==='ArrowLeft'?-1:1);W.copyText=null;render();}
