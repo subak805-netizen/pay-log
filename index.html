@@ -394,7 +394,7 @@ select.in{padding-right:24px;-webkit-appearance:none;appearance:none;background-
 
 <script>
 'use strict';
-var APP_VER='2026.10.18p';
+var APP_VER='2026.10.18q';
 var TABS=['dash','month','income','loan','fixed','card','inst','settle','save','tax'];
 var TAB_NAME={dash:'재정 한눈에',month:'이번 달',income:'수입',loan:'대출',fixed:'고정지출',card:'카드값',inst:'할부',settle:'정산 · 주고받을 돈',save:'저축 · 투자',tax:'세금'};
 var METHOD={equal:'매달 같은 금액',prin:'원금 똑같이',bullet:'이자만, 끝에 원금'};
@@ -1271,7 +1271,7 @@ function vDash(){
     +'<tr class="sum"><td>남는 돈</td><td class="r '+(left>=0?'plus':'minus')+'">'+(left<0?'-':'+')+won(Math.abs(left))+'원</td></tr>'
     +'</tbody></table></div><p class="hint">모으는 돈은 나가는 돈에 들어 있지만 사라지는 돈이 아니라 가진 돈으로 쌓여요.</p></div>';
   var chart='<div class="panel"><div class="ph"><span class="t">순자산 흐름</span><span class="small t3">지난 5달 · 앞으로 6달(흐린 막대 = 지금 계획대로 갔을 때)</span></div><div class="chartwrap">'+netChart(ym)+'</div></div>';
-  return h+'<div class="grid2 even"><div class="col">'+aP+'</div><div class="col">'+dP+'</div></div><div class="grid2" style="margin-top:14px"><div class="col">'+chart+'</div><div class="col">'+flow+'</div></div>';
+  return h+'<div class="grid2 even"><div class="col">'+aP+'</div><div class="col">'+flow+'</div></div><div style="margin-top:14px">'+chart+'</div><div style="margin-top:14px">'+dP+'</div>';
 }
 
 /* ── 데이터 창 ── */
