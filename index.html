@@ -222,7 +222,7 @@ select.in{padding-right:24px;-webkit-appearance:none;appearance:none;background-
 .debtbox .s{font-size:12.5px;color:var(--warn-ink);line-height:1.6}
 .tbl tr.cutrow td{background:var(--warn-bg);color:var(--warn-ink)}
 .jump{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:12px}
-#sec-loan,#sec-lend,#sec-debt,#sec-settle{scroll-margin-top:calc(env(safe-area-inset-top,0px) + 74px)}
+#sec-loan,#sec-lend,#sec-debt,#sec-settle,#sec-tax{scroll-margin-top:calc(env(safe-area-inset-top,0px) + 74px)}
 .demo-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:var(--warn-bg);color:var(--warn-ink);border-radius:12px;padding:9px 14px;font-size:12.5px;font-weight:600;margin-bottom:14px}
 
 /* 처음 화면 */
@@ -369,7 +369,7 @@ select.in{padding-right:24px;-webkit-appearance:none;appearance:none;background-
 
 <script>
 'use strict';
-var APP_VER='2026.10.18j';
+var APP_VER='2026.10.18k';
 var TABS=['month','loan','fixed','card','inst','settle','save'];
 var TAB_NAME={month:'이번 달',loan:'대출',fixed:'고정지출 · 수입 · 세금',card:'카드값',inst:'할부',settle:'정산 · 주고받을 돈',save:'저축 · 투자'};
 var METHOD={equal:'매달 같은 금액',prin:'원금 똑같이',bullet:'이자만, 끝에 원금'};
@@ -575,9 +575,11 @@ function debtState(D,ym){
 }
 /* 저축·투자. saves=[{id,name,kind save|invest|stock,monthly,day,start,end,base,from,value,valueAt,trades,prices}]
    넣은 돈 = 이미 모은 돈 + 날짜 지난 달마다 넣는 돈(그 달만 고친 금액 amt['sav:id']) + 한 번 넣기·빼기(m.sav[id]) */
-var SAVE_KIND={save:'저축',invest:'투자',stock:'주식 계좌'};
-function saveOn(s,ym){return (+s.monthly||0)>0&&s.start&&ymDiff(s.start,ym)>=0&&(!s.end||ymDiff(ym,s.end)>=0);}
-function saveAmt(s,ym){var ov=mo(ym).amt['sav:'+s.id];return ov!=null?+ov:+s.monthly||0;}
+var SAVE_KIND={save:'저축',invest:'투자',stock:'주식 계좌',tax:'세금 모으기'};
+/* 세금 모으기(kind tax): 고른 수입(s.incs)의 그 달 금액 × s.rate% 를 그 달에 모음 */
+function taxBase(s,ym){var m=mo(ym);return S.incomes.reduce(function(a,i){if((s.incs||[]).indexOf(i.id)<0||!fixedOn(i,ym))return a;var ov=m.amt['inc:'+i.id];return a+(ov!=null?+ov:+i.amt||0);},0);}
+function saveAmt(s,ym){var ov=mo(ym).amt['sav:'+s.id];if(ov!=null)return +ov;if(s.kind==='tax')return Math.round(taxBase(s,ym)*(+s.rate||0)/100);return +s.monthly||0;}
+function saveOn(s,ym){if(!s.start||ymDiff(s.start,ym)<0||(s.end&&ymDiff(ym,s.end)<0))return false;return s.kind==='tax'?saveAmt(s,ym)>0:(+s.monthly||0)>0;}
 function stockHold(s){
   var by={},spent=0,got=0;
   (s.trades||[]).forEach(function(t){var q=+t.qty||0,pr=+t.price||0,hh=by[t.name]||(by[t.name]={name:t.name,qty:0,cost:0});
@@ -589,7 +591,7 @@ function stockHold(s){
 }
 function saveState(s,ym){
   var put=+s.base||0,thisMonthly=0,thisExtra=0,m=s.start||ym,g=0;
-  if(+s.monthly>0&&s.start){while(ymDiff(m,ym)>=0&&g++<600){if(saveOn(s,m)){var a=saveAmt(s,m);if(m===ym)thisMonthly=a;if(ymDiff(m,ym)>0||passed(m,+s.day||1))put+=a;}m=ymAdd(m,1);}}
+  if(s.start){while(ymDiff(m,ym)>=0&&g++<600){if(saveOn(s,m)){var a=saveAmt(s,m);if(m===ym)thisMonthly=a;if(ymDiff(m,ym)>0||passed(m,+s.day||1))put+=a;}m=ymAdd(m,1);}}
   Object.keys(S.months).forEach(function(k){if(ymDiff(k,ym)<0)return;((S.months[k].sav||{})[s.id]||[]).forEach(function(e){put+=+e.amt||0;if(k===ym)thisExtra+=+e.amt||0;});});
   var r={put:put,thisMonthly:thisMonthly,thisExtra:thisExtra};
   if(s.kind==='stock'){var hd=stockHold(s);r.hold=hd.list;r.cash=put-hd.spent+hd.got;r.value=hd.val+r.cash;}
@@ -631,8 +633,8 @@ function outRows(ym){
   m.once.forEach(function(o){var key='once:'+o.id,cd=cardOf(o.from);
     rows.push({key:key,kind:'once',id:o.id,name:o.name,cat:o.cat||'이번 달만',day:+o.day||1,amt:+o.amt||0,paid:!!m.paid[key],src:o.from||'',inCard:cd?cd.name:'',excl:!!cd,spec:'once|'+o.id+'|amt|num',raw:+o.amt||0});});
   var prev=ymAdd(ym,-1),sp=settleOf(prev);
-  S.saves.forEach(function(s){var ck=s.kind==='save'?'저축':'투자';
-    if(saveOn(s,ym)){var sa=saveAmt(s,ym);rows.push({key:'sav:'+s.id,kind:'save',name:s.name+' 넣기',cat:ck,day:+s.day||1,amt:sa,src:s.from||'',sub:(s.from?s.from+'에서 · ':'')+SAVE_KIND[s.kind||'save'],spec:'mamt|sav:'+s.id+'||num',raw:sa});}
+  S.saves.forEach(function(s){var ck=s.kind==='save'?'저축':s.kind==='tax'?'세금':'투자';
+    if(saveOn(s,ym)){var sa=saveAmt(s,ym);rows.push({key:'sav:'+s.id,kind:'save',name:s.kind==='tax'?s.name+' ('+(+s.rate||0)+'%)':s.name+' 넣기',cat:ck,day:+s.day||1,amt:sa,src:s.from||'',sub:(s.from?s.from+'에서 · ':'')+(s.kind==='tax'?'수입 '+won(taxBase(s,ym))+'원의 '+(+s.rate||0)+'%':SAVE_KIND[s.kind||'save']),spec:'mamt|sav:'+s.id+'||num',raw:sa});}
     ((m.sav||{})[s.id]||[]).forEach(function(e){if(+e.amt>0)rows.push({key:'savx:'+e.id,kind:'save',name:s.name+' 넣기'+(e.memo?' ('+e.memo+')':''),cat:ck,day:+e.d||1,amt:+e.amt,src:s.from||'',sub:'한 번 넣기'});});});
   if(sp.has&&sp.net<0) rows.push({key:'settle',kind:'settleout',name:S.partner.name+'에게 정산 ('+mLabel(prev)+'분)',cat:'정산',day:+S.partner.day||5,amt:-sp.net,paid:!!sp.settled,prevYm:prev});
   rows.forEach(function(r){r.paid=passed(ym,r.day);});
@@ -890,9 +892,10 @@ function vFixed(){
       +ed(sp+'day|day',dayRaw(+i.day||1),dayLabel(+i.day||1),'t2')
       +ed(sp+'amt|num',i.amt,'+'+won(i.amt),'r amt plus')
       +'<td><select class="cellsel" data-chg="incevery" data-id="'+esc(i.id)+'" aria-label="주기">'+everyOpts(i.every)+'</select></td>'
+      +'<td class="hm">'+(function(){var tx=S.saves.filter(function(s){return s.kind==='tax'&&(s.incs||[]).indexOf(i.id)>=0;});return '<button type="button" class="lnk2" data-act="gotojump" data-tab="save" data-to="sec-tax">'+(tx.length?tx.map(function(s){return esc(s.name)+' '+esc(s.rate)+'%';}).join(' · '):'세금 모으기')+'</button>';})()+'</td>'
       +'<td class="r">'+del('incomes',i.id,i.name)+'</td></tr>';}).join('');
   var incP='<div class="panel"><div class="ph"><span class="t">고정 수입</span><span class="small t3">'+mLabel(ym)+' 들어올 돈 +'+won(isum)+'원</span></div>'
-    +(ilist.length?'<div class="tw"><table class="tbl"><thead><tr><th>이름</th><th>날짜</th><th class="r">금액</th><th>주기</th><th></th></tr></thead><tbody>'+itr+'</tbody></table></div>':'<div class="empty small">월급·부수입·용돈처럼 정해서 들어오는 돈을 적어주세요</div>')
+    +(ilist.length?'<div class="tw"><table class="tbl"><thead><tr><th>이름</th><th>날짜</th><th class="r">금액</th><th>주기</th><th class="hm">세금</th><th></th></tr></thead><tbody>'+itr+'</tbody></table></div>':'<div class="empty small">월급·부수입·용돈처럼 정해서 들어오는 돈을 적어주세요</div>')
     +'<form class="addf" data-form="income"><input class="in w-name" name="name" placeholder="이름 (예: 월급)" autocomplete="off"><input class="in w-day" name="day" placeholder="날짜" autocomplete="off"><input class="in w-amt" name="amt" placeholder="금액" inputmode="numeric" autocomplete="off"><input class="in w-sm" name="to" placeholder="들어오는 곳" list="dl-from" autocomplete="off"><select class="in w-sm" name="every" aria-label="주기">'+everyOpts(1)+'</select><input class="in w-cnt" name="first" placeholder="처음 들어올 달" autocomplete="off"><button class="btn save" type="submit">추가</button></form>'
     +'<p class="hint">적어두면 이번 달 화면의 들어오는 돈에 자동으로 들어가요. 이번 달만 들어온 돈은 이번 달 화면에서 적어요.</p></div>';
   var right='<div class="panel"><div class="ph"><span class="t">세금 달력 (앞으로 1년)</span></div><div class="chips" style="padding:0 18px 10px">'+set+'</div>'
@@ -1029,7 +1032,7 @@ var SAVE_COL=['#1C1C1F','#0E9E72','#C9A15A','#8A8D93','#7FC8A9','#8A5A14','#5E61
 function signWon(n){return (n>=0?'+':'-')+won(Math.abs(n));}
 function vSave(){
   var ym=W.ym,totV=0,totP=0,sv=0,iv=0,ip=0,thisIn=0,parts=[];
-  var states=S.saves.map(function(s){var st=saveState(s,ym);totV+=st.value;totP+=st.put;if(s.kind==='save')sv+=st.value;else{iv+=st.value;ip+=st.put;}thisIn+=st.thisMonthly+Math.max(0,st.thisExtra);
+  var tv=0;var states=S.saves.map(function(s){var st=saveState(s,ym);totV+=st.value;totP+=st.put;if(s.kind==='save')sv+=st.value;else if(s.kind==='tax')tv+=st.value;else{iv+=st.value;ip+=st.put;}thisIn+=st.thisMonthly+Math.max(0,st.thisExtra);
     if(s.kind==='stock'){st.hold.forEach(function(x){if(x.val>0)parts.push({n:s.name+' · '+x.name,v:x.val});});if(st.cash>0)parts.push({n:s.name+' · 현금',v:st.cash});}
     else if(st.value>0)parts.push({n:s.name,v:st.value});
     return {s:s,st:st};});
@@ -1051,7 +1054,7 @@ function vSave(){
       +'<td class="r amt">'+won(st.value)+(+s.base?'<div class="small t3">처음 '+won(s.base)+'</div>':'')+'</td><td class="r">'+del('saves',s.id,s.name)+'</td></tr>';}).join('');
   var savePanel='<div class="panel" style="margin-bottom:14px"><div class="ph"><span class="t">저축 통장</span><span class="small t3">적금 · 청약 · 비상금</span></div>'
     +(saveRows?'<div class="tw"><table class="tbl"><thead><tr><th>이름</th><th class="r">매달</th><th class="hm">넣는 날</th><th class="hm">만기</th><th class="r">모은 돈</th><th></th></tr></thead><tbody>'+saveRows+'</tbody></table></div>':'<div class="empty small">적금, 청약, 비상금 통장처럼 모으는 돈을 적어주세요</div>')+'</div>';
-  var invPanels=states.filter(function(x){return x.s.kind!=='save';}).map(function(x){var s=x.s,st=x.st,sp='saves|'+s.id+'|';
+  var invPanels=states.filter(function(x){return x.s.kind==='invest'||x.s.kind==='stock';}).map(function(x){var s=x.s,st=x.st,sp='saves|'+s.id+'|';
     var head='<div class="cc-head"><span class="cc-chip '+(s.kind==='stock'?'c1':'c2')+'"></span><div class="bd"><div class="cc-nm">'+eds(sp+'name|text',s.name,esc(s.name),'이름')+' <span class="badge gray">'+SAVE_KIND[s.kind]+'</span></div><div class="cc-sub">매달 '+eds(sp+'monthly|numopt',+s.monthly||'',+s.monthly?won(s.monthly)+'원':'안 넣음','매달 넣는 돈')+' · '+eds(sp+'day|day',dayRaw(+s.day||1),dayLabel(+s.day||1),'넣는 날')+(s.from?' · '+esc(s.from)+'에서':'')+'</div></div>'+del('saves',s.id,s.name)+'</div>';
     var now='<div class="cc-now"><span class="k">'+(s.kind==='stock'?'평가 금액':'지금 금액')+'</span><span class="v">'+(s.kind==='invest'?eds(sp+'value|numopt',+s.value||'',won(st.value)+'원','지금 금액'):won(st.value)+'원')+'</span><span class="'+(st.gain>=0?'plus':'minus')+' small" style="font-weight:800">'+signWon(st.gain)+' ('+st.pct+'%)</span></div>'
       +'<div class="cc-break">넣은 돈 '+won(st.put)+'원'+(s.kind==='invest'?(s.valueAt?' · 지금 금액은 '+esc(s.valueAt.slice(5).replace('-','/'))+' 기준 (눌러서 고치기)':' · 지금 금액을 눌러 적으면 수익이 나와요'):'')+(s.kind==='stock'?' · 남은 현금 '+won(st.cash)+'원':'')+'</div>';
@@ -1073,7 +1076,25 @@ function vSave(){
     +'<p class="hint">보너스를 넣거나 비상금을 꺼냈을 때 적어요. 넣은 건 이번 달 나가는 돈에, 뺀 건 들어오는 돈에 들어가요.</p></div>';
   var add='<div class="panel" style="margin-top:14px"><div class="ph"><span class="t">저축 · 투자 추가</span></div><form class="addf" data-form="save" style="border-top:none;background:var(--card)"><input class="in w-name" name="name" placeholder="이름 (예: 청년도약계좌)" autocomplete="off"><select class="in w-sm" name="kind" aria-label="종류"><option value="save">저축 (적금·청약)</option><option value="invest">투자 (금액만)</option><option value="stock">주식 계좌 (종목별)</option></select><input class="in w-amt" name="monthly" placeholder="매달 넣는 돈 (선택)" inputmode="numeric" autocomplete="off"><input class="in w-day" name="day" placeholder="넣는 날" autocomplete="off"><input class="in w-amt" name="base" placeholder="지금까지 모은 돈 (선택)" inputmode="numeric" autocomplete="off"><input class="in w-sm" name="from" placeholder="빠져나가는 통장" list="dl-from-s" autocomplete="off"><datalist id="dl-from-s">'+fromList().map(function(x){return '<option value="'+esc(x)+'">';}).join('')+'</datalist><button class="btn save" type="submit">추가</button></form>'
     +'<p class="hint">매달 넣는 돈은 넣는 날이 지나면 모은 돈에 쌓이고, 이번 달 나가는 돈에도 「저축·투자」로 들어가요. 지금까지 모은 돈을 적으면 거기서부터 쌓여요.</p></div>';
-  return h+move+bar+'<div class="grid2 even">'+'<div class="col">'+savePanel+exPanel+'</div><div class="col">'+(invPanels||'<div class="panel"><div class="empty small">투자 계좌가 없어요. 아래에서 「투자」나 「주식 계좌」로 추가해 주세요</div></div>')+'</div></div>'+add;
+  return h+move+bar+taxSection(ym,states,tv)+'<div class="grid2 even">'+'<div class="col">'+savePanel+exPanel+'</div><div class="col">'+(invPanels||'<div class="panel"><div class="empty small">투자 계좌가 없어요. 아래에서 「투자」나 「주식 계좌」로 추가해 주세요</div></div>')+'</div></div>'+add;
+}
+
+function nextTaxes(ym,n){var out=[];for(var i=0;i<14&&out.length<n;i++){var y=ymAdd(ym,i);taxesIn(y).forEach(function(t){if(out.length<n&&(t.need==='biz'||/소득|부가/.test(t.name)))out.push({ym:y,t:t});});}return out;}
+function taxSection(ym,states,tv){
+  var taxes=states.filter(function(x){return x.s.kind==='tax';});
+  var nx=nextTaxes(ym,2),nxTxt=nx.length?'다음에 낼 세금: '+nx.map(function(x){return ymShort(x.ym)+' '+x.t.name;}).join(' · '):(S.taxSet.biz?'':'고정·수입·세금 화면에서 「사업자」를 고르면 낼 세금 달도 알려줘요');
+  var cards=taxes.map(function(x){var s=x.s,st=x.st,sp='saves|'+s.id+'|',base=taxBase(s,ym);
+    var chips=S.incomes.length?S.incomes.map(function(i){var on=(s.incs||[]).indexOf(i.id)>=0;return '<button type="button" class="tgl '+(on?'on':'')+'" data-act="taxinc" data-id="'+esc(s.id)+'" data-inc="'+esc(i.id)+'" aria-pressed="'+(on?'true':'false')+'">'+esc(i.name)+' '+won(i.amt)+'</button>';}).join(''):'<span class="small t3">고정 수입(급여)을 먼저 적어주세요</span>';
+    return '<div class="panel taxp"><div class="cc-head"><span class="cc-chip c2"></span><div class="bd"><div class="cc-nm">'+eds(sp+'name|text',s.name,esc(s.name),'이름')+' · 수입의 '+eds(sp+'rate|rate',s.rate,esc(s.rate)+'%','몇 %')+'</div><div class="cc-sub">수입 들어오는 날 '+eds(sp+'day|day',dayRaw(+s.day||1),dayLabel(+s.day||1),'모으는 날')+' 모음 · '+eds(sp+'from|textopt',s.from||'',s.from?esc(s.from)+'에서':'어디서 옮기는지 적기','빠져나가는 통장')+'</div></div>'+del('saves',s.id,s.name)+'</div>'
+      +'<div class="cc-now"><span class="k">'+mLabel(ym)+' 모을 돈</span><span class="v">'+won(st.thisMonthly)+'원</span><span class="small t3">'+won(base)+'원 × '+esc(s.rate)+'%</span></div>'
+      +'<div class="cc-break"><b>지금까지 모은 돈 '+won(st.value)+'원</b> · 처음 모아둔 돈 '+eds(sp+'base|numopt',+s.base||'',+s.base?won(s.base)+'원':'적기','처음 모아둔 돈')+'</div>'
+      +'<div class="cc-break" style="padding-bottom:4px">어느 수입에서 뗄지 (눌러서 켜고 끄기)</div><div class="cc-items">'+chips+'</div></div>';}).join('');
+  var add='<form class="addf" data-form="taxsave" style="border-top:none;background:var(--card)"><span class="lbl">세금 모으기 추가 (고정 수입 전부에서 떼고, 나중에 고를 수 있어요)</span><input class="in w-name" name="name" placeholder="이름 (예: 소득세)" autocomplete="off"><input class="in w-day" name="rate" placeholder="몇 %" inputmode="decimal" autocomplete="off"><button class="btn save" type="submit">추가</button>'
+    +(taxes.length?'':'<button type="button" class="btn" data-act="taxpreset" data-n="세금" data-r="10">급여 10% 세금 모으기</button>')+'</form>';
+  return '<div id="sec-tax" style="margin-bottom:14px"><div class="panel" style="margin-bottom:12px"><div class="ph"><span class="t">세금 모으기</span><span class="small t3">'+(taxes.length?'모은 세금 '+won(tv)+'원':'')+'</span></div>'
+    +(nxTxt?'<p class="hint" style="padding-top:0">'+esc(nxTxt)+'</p>':'')+add
+    +'<p class="hint">급여가 들어오는 달마다 그 금액의 %만큼 자동으로 계산해서 이번 달 나가는 돈에 「세금」으로 잡아요. 세금 낼 때는 아래 「한 번 넣기·빼기」에서 빼면 돼요.</p></div>'
+    +(cards?'<div class="grid2 even">'+cards+'</div>':'')+'</div>';
 }
 
 /* ── 데이터 창 ── */
@@ -1213,6 +1234,10 @@ function lazyRender(){if(!pendingRender)return;var a=document.activeElement;if(a
 
 /* ── 추가 ── */
 function req(f,names){for(var i=0;i<names.length;i++){var el=f.elements[names[i]];if(!el||!el.value.trim()){toast('빈 칸을 채워주세요: '+(el&&el.placeholder||names[i]));if(el)el.focus();return false;}}return true;}
+function addTaxSave(name,rate){
+  var incs=S.incomes.map(function(i){return i.id;}),day=S.incomes.length?Math.min.apply(null,S.incomes.map(function(i){return +i.day||1;})):25;
+  mut(function(){S.saves.push({id:uid(),name:name||'세금',kind:'tax',rate:rate,incs:incs,monthly:0,day:day,start:W.ym,end:'',base:0,from:(S.incomes[0]&&S.incomes[0].to)||'',trades:[],prices:{}});},'"'+(name||'세금')+' '+rate+'%" 모으기를 켰어요'+(incs.length?'':' · 고정 수입을 적으면 계산돼요'));
+}
 function addFrom(kind,f){
   var g=function(n){var el=f.elements[n];return el?String(el.value).trim():'';},id=uid(),ym=W.ym;
   var bad=function(msg){toast(msg||'숫자를 확인해 주세요');return false;};
@@ -1237,6 +1262,7 @@ function addFrom(kind,f){
     mut(function(){(ts.trades=ts.trades||[]).push({id:id,name:g('name'),qty:g('side')==='sell'?-tq:tq,price:tp,ym:ym});},g('name')+' '+tq+'주 '+(g('side')==='sell'?'판':'산')+' 기록을 적었어요');}
   else if(kind==='sdebt'){if(!req(f,['amt']))return;var sda=num(g('amt')),sds=g('start')?parseYmLoose(g('start'),ym):ym;if(isNaN(sda))return bad();if(!sds)return bad('까기 시작은 10월이나 2026-10처럼 적어주세요');
     mut(function(){S.debts.push({id:id,who:S.partner.name,amt:sda,lendId:'__settle',start:sds,pre:0});},S.partner.name+'한테 줄 돈을 넣었어요 · 입금받을 돈에서 까요');}
+  else if(kind==='taxsave'){if(!req(f,['name','rate']))return;var tr0=parseFloat(g('rate').replace(/[^\d.]/g,''));if(!(tr0>0&&tr0<=100))return bad('몇 %인지 숫자로 적어주세요');addTaxSave(g('name'),tr0);return;}
   else if(kind==='debt'){if(!req(f,['who','amt']))return;var da=num(g('amt')),dp=g('pre')?num(g('pre')):0,ds=g('start')?parseYmLoose(g('start'),ym):ym;if(isNaN(da)||isNaN(dp))return bad();if(!ds)return bad('까기 시작 달은 11월이나 2026-11처럼 적어주세요');
     mut(function(){S.debts.push({id:id,who:g('who'),amt:da,lendId:g('lendId'),start:ds,pre:dp});},g('who')+'한테 줄 돈을 적었어요'+(g('lendId')?' · 받을 돈으로 까요':''));}
   else if(kind==='lend'){if(!req(f,['who','per','day']))return;var la=g('amt')?num(g('amt')):0,lp=num(g('per')),ld=parseDay(g('day')),pre=g('pre')?num(g('pre')):0;if(isNaN(la)||isNaN(lp)||lp<1||isNaN(ld)||isNaN(pre))return bad();
@@ -1448,6 +1474,9 @@ document.addEventListener('click',function(e){
       case 'cyes':runConfirm();break;
       case 'cno':W.confirm=null;renderSheet();break;
       case 'fix2save':(function(){var fx=S.fixed.find(function(x){return x.id===d.id;});if(!fx)return;mut(function(){S.saves.push({id:uid(),name:fx.name,kind:/투자/.test(fx.cat||'')?'invest':'save',monthly:+fx.amt||0,day:+fx.day||1,start:fx.start||W.ym,end:'',base:0,from:fx.from||'',trades:[],prices:{}});S.fixed=S.fixed.filter(function(x){return x.id!==fx.id;});},'"'+fx.name+'" 저축 칸으로 옮겼어요');})();break;
+      case 'taxinc':mut(function(){var s=S.saves.find(function(x){return x.id===d.id;});if(!s)return;s.incs=s.incs||[];var k=s.incs.indexOf(d.inc);if(k>=0)s.incs.splice(k,1);else s.incs.push(d.inc);});break;
+      case 'taxpreset':addTaxSave(d.n,+d.r);break;
+      case 'gotojump':go(d.tab);(function(){var el=document.getElementById(d.to);if(el)el.scrollIntoView();})();break;
       case 'cardtype':mut(function(){var c=S.cards.find(function(x){return x.id===d.id;});if(c)c.type=isChk(c)?'credit':'check';},'카드 종류를 바꿨어요');break;
       case 'loanoff':mut(function(){var L=S.loans.find(function(x){return x.id===d.id;});if(L)L.off=d.v==='1';},d.v==='1'?'대출을 꺼뒀어요 · 합계에서 빠져요':'대출을 켰어요 · 첫 상환 달을 확인해 주세요');break;
       case 'viafixed':mut(function(){var L=S.loans.find(function(x){return x.id===d.id;});if(L)L.viaFixed=d.v==='1';},d.v==='1'?'이번 달 합계엔 고정지출 쪽만 넣을게요':'이번 달 합계에 대출 상환을 넣을게요');break;
