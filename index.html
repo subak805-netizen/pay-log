@@ -351,7 +351,7 @@ select.in{padding-right:24px;-webkit-appearance:none;appearance:none;background-
 
 <script>
 'use strict';
-var APP_VER='2026.10.18d';
+var APP_VER='2026.10.18e';
 var TABS=['month','loan','fixed','card','inst','settle'];
 var TAB_NAME={month:'이번 달',loan:'대출 · 받을 돈',fixed:'고정지출 · 수입 · 세금',card:'카드값',inst:'할부',settle:'정산'};
 var METHOD={equal:'매달 같은 금액',prin:'원금 똑같이',bullet:'이자만, 끝에 원금'};
@@ -398,10 +398,10 @@ function parseYmLoose(s,base){var y=parseYm(s);if(y)return y;var m=String(s).mat
 function parseCnt(s){s=String(s).trim();if(!s||/매달|없/.test(s))return {k:0,of:0,empty:true};var m=s.match(/(\d+)\s*(?:\/\s*(\d+))?/);if(!m)return null;return {k:Math.max(0,+m[1]),of:m[2]?+m[2]:0};}
 
 /* ── 저장 ── */
-function blank(){return {v:1,loans:[],lends:[],fixed:[],incomes:[],cards:[],insts:[],partner:{name:'오빠',me:'나',day:5},sItems:[],taxSet:{car:false,house:false,biz:false},months:{}};}
+function blank(){return {v:1,loans:[],lends:[],debts:[],fixed:[],incomes:[],cards:[],insts:[],partner:{name:'오빠',me:'나',day:5},sItems:[],taxSet:{car:false,house:false,biz:false},months:{}};}
 function normalize(d){
   var b=blank(); if(!d||typeof d!=='object') return b;
-  ['loans','lends','fixed','incomes','cards','insts','sItems'].forEach(function(k){if(Array.isArray(d[k]))b[k]=d[k].filter(function(x){return x&&x.id;});});
+  ['loans','lends','debts','fixed','incomes','cards','insts','sItems'].forEach(function(k){if(Array.isArray(d[k]))b[k]=d[k].filter(function(x){return x&&x.id;});});
   if(d.partner&&typeof d.partner==='object')b.partner={name:d.partner.name||'오빠',me:d.partner.me||'나',day:+d.partner.day||5};
   if(d.taxSet)b.taxSet={car:!!d.taxSet.car,house:!!d.taxSet.house,biz:!!d.taxSet.biz};
   if(d.months&&typeof d.months==='object')b.months=d.months;
@@ -424,7 +424,7 @@ var HIST=[], pendingRender=false;
 function snap(){HIST.push(JSON.stringify(S));if(HIST.length>40)HIST.shift();}
 function undo(){if(!HIST.length){toast('되돌릴 게 없어요');return;}S=normalize(JSON.parse(HIST.pop()));save();render();toast('되돌렸어요');}
 function mut(fn,msg){snap();fn();save();render();if(msg)toast(msg,true);}
-function hasData(s){s=s||S;return !!(s.loans.length||s.lends.length||s.fixed.length||s.incomes.length||s.cards.length||s.insts.length||s.sItems.length||Object.keys(s.months).some(function(k){var m=s.months[k];return m&&m.once&&m.once.length;}));}
+function hasData(s){s=s||S;return !!(s.loans.length||s.lends.length||s.debts.length||s.fixed.length||s.incomes.length||s.cards.length||s.insts.length||s.sItems.length||Object.keys(s.months).some(function(k){var m=s.months[k];return m&&m.once&&m.once.length;}));}
 
 /* ── 달별 기록 ── */
 function mo(ym){var m=S.months[ym]||{};return {paid:m.paid||{},amt:m.amt||{},once:m.once||[],inOnce:m.inOnce||[],got:m.got||{},chk:m.chk||{},settled:m.settled||null};}
@@ -507,6 +507,30 @@ function lendAt(l,ym){
     }
   }
   res.got=got;res.rem=open?null:total-got;res.open=open;res.cnt=cnt;res.started=ymDiff(l.start,ym)>=0;
+  var D=S.debts.find(function(x){return x.lendId===l.id;});
+  res.thisDebt=D&&res.expected?debtState(D,ym).thisCut:0;res.thisCash=res.thisAmt-res.thisDebt;res.debt=D||null;
+  return res;
+}
+/* 줄 돈 = 오빠 등에게 줄 총액. 연결한 받을 돈(lendId)을 현금으로 안 받고 매달 여기서 깎음(사용자 방식 10-18).
+   left = 보는 달 전까지 깎인 것 + 보는 달도 날짜가 지났으면 깎은 뒤 남은 줄 돈, end = 다 깎이는 달(앞으로도 매달 받는다고 보고 계산) */
+function debtState(D,ym){
+  var T=+D.amt||0,start0=T-Math.min(T,+D.pre||0),L=S.lends.find(function(x){return x.id===D.lendId;});
+  var res={total:T,left:start0,thisCut:0,end:null,lend:L||null};
+  if(!L){if(start0<=0)res.end=D.start;return res;}
+  var total=+L.amt||0,open=!total,per=Math.max(1,+L.per||1),got=open?(+L.pre||0):Math.min(total,+L.pre||0);
+  var proj=start0,m=L.start,guard=0,day=+L.day||1;
+  while(guard++<600){
+    var rem=open?per:total-got;if(rem<=0)break;
+    var a=Math.min(per,rem),cut=0;
+    if(ymDiff(D.start,m)>=0&&proj>0)cut=Math.min(a,proj);
+    if(m===ym)res.thisCut=cut;
+    if(cut&&(ymDiff(m,ym)>0||(m===ym&&passed(m,day))))res.left-=cut;
+    proj-=cut;got+=a;
+    if(proj<=0&&!res.end&&cut)res.end=m;
+    if(proj<=0&&ymDiff(ym,m)>=0)break;
+    m=ymAdd(m,1);
+  }
+  if(start0<=0&&!res.end)res.end=D.start;
   return res;
 }
 function sK(it,ym){var k=ymDiff(it.start,ym)+1;if(k<1)return 0;if(+it.of&&k>+it.of)return 0;return k;}
@@ -555,7 +579,8 @@ function inRows(ym){
     rows.push({kind:'inc',key:key,name:i.name,day:+i.day||1,amt:amt,got:!!m.got[key],src:i.to||'',sub:(i.to?i.to+'으로':'')+(ov!=null&&+ov!==+i.amt?(i.to?' · ':'')+'평소 '+won(i.amt)+'원':''),spec:'mamt|'+key+'||num',raw:amt,every:+i.every||1});});
   m.inOnce.forEach(function(o){var key='inonce:'+o.id;rows.push({kind:'inonce',key:key,id:o.id,name:o.name,day:+o.day||1,amt:+o.amt||0,got:!!m.got[key],sub:'이번 달만',spec:'inonce|'+o.id+'|amt|num',raw:+o.amt||0});});
   S.lends.forEach(function(l){var s=lendAt(l,ym);if(!s.expected)return;
-    rows.push({kind:'lend',key:'lend:'+l.id,name:l.who+' (받을 돈)',day:+l.day||1,amt:s.thisAmt,got:s.thisGot,sub:s.open?'매달':(s.thisGot?s.cnt:s.cnt+1)+'회차'});});
+    var dsub=s.thisDebt?(s.debt.who||l.who)+'한테 줄 돈에서 '+won(s.thisDebt)+'원 깜'+(s.thisCash?' · 나머지만 현금':' · 현금 아님'):'';
+    rows.push({kind:'lend',key:'lend:'+l.id,name:l.who+' (받을 돈)',day:+l.day||1,amt:s.thisCash,got:s.thisGot,cut:s.thisDebt,sub:dsub||(s.open?'매달':(s.thisGot?s.cnt:s.cnt+1)+'회차')});});
   rows.forEach(function(r){r.got=passed(ym,r.day);});
   rows.sort(function(a,b){return a.day-b.day;});
   return rows;
@@ -640,7 +665,7 @@ function vMonth(){
     +'</tbody></table></div></div>':'';
   var inc='<div class="panel"><div class="ph"><span class="t">들어오는 돈</span><span class="small t3">나가는 돈과 따로 계산</span></div>'
     +(ins.length?'<div class="tw"><table class="tbl"><tbody>'+ins.map(function(r){
-      var st=statusOf(ym,r.day,'들어옴');
+      var st=r.cut&&!r.amt?['gray','줄 돈에서 깜']:statusOf(ym,r.day,'들어옴');
       var tag=r.kind==='inc'&&r.every>1?' <span class="badge gray">'+EVERY[r.every]+'</span>':'';
       var amtC=r.spec?ed(r.spec,r.raw,'+'+won(r.amt),'r amt plus',r.name+' 금액'):'<td class="r amt plus">+'+won(r.amt)+'</td>';
       return '<tr class="'+(r.got?'done':'')+'"><td class="t2 nw">'+dayLabel(r.day)+'</td><td class="c-name"><div class="nm">'+esc(r.name)+tag+'</div>'+(r.sub?'<div class="sb">'+esc(r.sub)+'</div>':'')+'</td>'+amtC+'<td class="r">'+badge(st)+(r.kind==='inonce'?' '+del('inonce',r.id,r.name):'')+'</td></tr>';
@@ -718,13 +743,31 @@ function vLoan(){
   } else if(!W.loanForm){
     h+='<div class="panel" style="margin-bottom:14px"><div class="empty"><b>등록된 대출이 없어요</b>대출을 추가하면 매달 원금·이자와 다 갚는 날을 계산해 드려요. 대출마다 내는 방식을 따로 고를 수 있어요.<div class="chips"><button type="button" class="btn save" data-act="loanform">+ 대출 추가</button></div></div></div>';
   }
-  return h+lendSection();
+  return h+lendSection()+debtSection();
+}
+function lendOpts(sel){return '<option value="">까는 받을 돈 없음</option>'+S.lends.map(function(l){return '<option value="'+esc(l.id)+'"'+(l.id===sel?' selected':'')+'>'+esc(l.who)+' · 매달 '+won(l.per)+'</option>';}).join('');}
+function debtSection(){
+  var ym=W.ym,leftAll=0;
+  var tr=S.debts.map(function(D){var st=debtState(D,ym),sp='debts|'+D.id+'|',left=Math.max(0,st.left),done=left<=0;leftAll+=left;
+    var pct=st.total?Math.round((st.total-left)/st.total*100):0;
+    return '<tr class="'+(done?'off':'')+'"><td class="c-name">'+eds(sp+'who|text',D.who,'<span class="nm">'+esc(D.who)+'</span>','누구한테')+'<div class="sb">'+eds(sp+'start|ym',D.start,ymShort(D.start),'까기 시작한 달')+'부터 깜</div></td>'
+      +ed(sp+'amt|num',D.amt,won(D.amt),'r','줄 돈 총액')
+      +'<td><select class="cellsel" data-chg="debtlend" data-id="'+esc(D.id)+'" aria-label="까는 받을 돈">'+lendOpts(D.lendId)+'</select></td>'
+      +'<td class="r hm">'+won(st.total-left)+'<div class="pbar" style="margin-left:auto"><i style="width:'+pct+'%"></i></div></td>'
+      +'<td class="r amt">'+won(left)+(st.thisCut?'<div class="small t3">'+mLabel(ym)+' '+won(st.thisCut)+' 깜</div>':'')+'</td>'
+      +'<td class="r t2 nw hm">'+(done?'<span class="badge ok">다 깜</span>':st.end?ymShort(st.end)+' 끝':(st.lend?'—':'<span class="t3">받을 돈 고르기</span>'))+'</td>'
+      +'<td class="r">'+del('debts',D.id,D.who)+'</td></tr>';}).join('');
+  return '<div class="panel" style="margin-top:14px"><div class="ph"><span class="t">줄 돈 (받을 돈으로 까기)</span><span class="small t3">'+(leftAll?'남은 줄 돈 '+won(leftAll)+'원':'')+'</span></div>'
+    +(S.debts.length?'<div class="tw"><table class="tbl"><thead><tr><th>누구한테</th><th class="r">줄 돈</th><th>까는 받을 돈</th><th class="r hm">깐 돈</th><th class="r">남은 줄 돈</th><th class="r hm">다 까는 달</th><th></th></tr></thead><tbody>'+tr+'</tbody></table></div>'
+      :'<div class="empty small">누구한테 줄 돈이 있는데 그 사람한테 받을 돈으로 까기로 했다면 여기 적어주세요</div>')
+    +'<form class="addf" data-form="debt"><input class="in w-name" name="who" placeholder="누구한테" autocomplete="off"><input class="in w-amt" name="amt" placeholder="줄 돈 총액" inputmode="numeric" autocomplete="off"><select class="in w-sm" name="lendId" aria-label="까는 받을 돈">'+lendOpts('')+'</select><input class="in w-cnt" name="start" placeholder="까기 시작 달 ('+mLabel(ym)+')" autocomplete="off"><input class="in w-amt" name="pre" placeholder="이미 깐 돈 (선택)" inputmode="numeric" autocomplete="off"><button class="btn save" type="submit">추가</button></form>'
+    +'<p class="hint">까는 받을 돈을 고르면 줄 돈이 남아 있는 동안 그 돈은 현금으로 안 들어오고 줄 돈에서 깎여요. 다 깎이면 그다음 달부터 다시 현금으로 들어와요. 받을 돈이 아직 없으면 위 받아야 하는 돈에 먼저 적어주세요.</p></div>';
 }
 function lendSection(){
   var ym=W.ym,remAll=0;
   var tr=S.lends.map(function(l){
     var s=lendAt(l,ym),sp='lends|'+l.id+'|',done=!s.open&&s.rem<=0;if(!s.open)remAll+=s.rem;
-    var tog=s.expected?badge(statusOf(ym,+l.day||1,'들어옴')):(done?'<span class="badge ok">다 받음</span>':'<span class="badge gray">시작 전</span>');
+    var tog=s.expected?(s.thisDebt?'<span class="badge gray">줄 돈에서 깜</span>':badge(statusOf(ym,+l.day||1,'들어옴'))):(done?'<span class="badge ok">다 받음</span>':'<span class="badge gray">시작 전</span>');
     var pct=(+l.amt)?Math.round(s.got/(+l.amt)*100):0;
     return '<tr class="'+(done?'off':'')+'">'+ed(sp+'who|text',l.who,'<span class="nm">'+esc(l.who)+'</span>','c-name')
       +ed(sp+'amt|numopt',+l.amt||'',s.open?'<span class="t2">매달 계속</span>':won(l.amt),'r','총액 (비우면 매달 계속)')+ed(sp+'per|num',l.per,won(l.per),'r')+ed(sp+'day|day',dayRaw(+l.day||1),dayLabel(+l.day||1),'hm')
@@ -1035,6 +1078,8 @@ function addFrom(kind,f){
   else if(kind==='loan'){if(!req(f,['name','P','rate','n','day']))return;var P=num(g('P')),rate=parseFloat(g('rate').replace(/[^\d.]/g,'')),n=num(g('n')),dd=parseDay(g('day')),st=parseYm(g('start')||ym);
     if(isNaN(P)||P<1||isNaN(rate)||isNaN(n)||n<1||isNaN(dd))return bad();if(!st)return bad('첫 상환 달을 2026-03처럼 적어주세요');
     mut(function(){S.loans.push({id:id,name:g('name'),bank:g('bank'),P:P,rate:rate,n:n,day:dd,start:st,method:g('method')||'equal',viaFixed:!!(f.elements.viaFixed&&f.elements.viaFixed.checked),off:!!(f.elements.off&&f.elements.off.checked)});W.loanSel=id;W.loanForm=false;},'"'+g('name')+'" 대출을 추가했어요');after=null;}
+  else if(kind==='debt'){if(!req(f,['who','amt']))return;var da=num(g('amt')),dp=g('pre')?num(g('pre')):0,ds=g('start')?parseYmLoose(g('start'),ym):ym;if(isNaN(da)||isNaN(dp))return bad();if(!ds)return bad('까기 시작 달은 11월이나 2026-11처럼 적어주세요');
+    mut(function(){S.debts.push({id:id,who:g('who'),amt:da,lendId:g('lendId'),start:ds,pre:dp});},g('who')+'한테 줄 돈을 적었어요'+(g('lendId')?' · 받을 돈으로 까요':''));}
   else if(kind==='lend'){if(!req(f,['who','per','day']))return;var la=g('amt')?num(g('amt')):0,lp=num(g('per')),ld=parseDay(g('day')),pre=g('pre')?num(g('pre')):0;if(isNaN(la)||isNaN(lp)||lp<1||isNaN(ld)||isNaN(pre))return bad();
     mut(function(){S.lends.push({id:id,who:g('who'),amt:la,per:lp,day:ld,start:ym,pre:pre});},g('who')+'한테 받을 돈을 적었어요'+(la?'':' · 매달 계속'));}
   else if(kind==='card'){var ctype=g('type')==='check'?'check':'credit';if(!req(f,ctype==='check'?['name']:['name','day']))return;var cd=ctype==='check'?(g('day')?parseDay(g('day')):1):parseDay(g('day'));if(isNaN(cd))return bad('결제일은 1~31로 적어주세요');
@@ -1112,7 +1157,7 @@ function mergeStates(a,b){
   if(od.demo&&!nw.demo)return nw;
   if(nw.demo&&!od.demo)return od;
   var r=JSON.parse(JSON.stringify(nw));
-  ['loans','lends','fixed','incomes','cards','insts','sItems'].forEach(function(k){var ids={};r[k].forEach(function(x){ids[x.id]=1;});od[k].forEach(function(x){if(!ids[x.id])r[k].push(JSON.parse(JSON.stringify(x)));});});
+  ['loans','lends','debts','fixed','incomes','cards','insts','sItems'].forEach(function(k){var ids={};r[k].forEach(function(x){ids[x.id]=1;});od[k].forEach(function(x){if(!ids[x.id])r[k].push(JSON.parse(JSON.stringify(x)));});});
   Object.keys(od.months).forEach(function(ym){
     var o=od.months[ym]||{},m=r.months[ym]||(r.months[ym]={});
     ['paid','amt','got'].forEach(function(f){m[f]=Object.assign({},o[f]||{},m[f]||{});});
@@ -1258,6 +1303,7 @@ document.addEventListener('submit',function(e){var f=e.target;if(!f.dataset||!f.
   addFrom(f.dataset.form,f);});
 document.addEventListener('change',function(e){
   var t=e.target;
+  if(t.dataset&&t.dataset.chg==='debtlend'){var dv=t.value,did=t.dataset.id;mut(function(){var D=S.debts.find(function(x){return x.id===did;});if(D)D.lendId=dv;},dv?'까는 받을 돈을 연결했어요':'연결을 풀었어요');return;}
   if(t.dataset&&t.dataset.chg==='incevery'){var iv=Math.max(1,+t.value||1),iid=t.dataset.id;mut(function(){var x=S.incomes.find(function(y){return y.id===iid;});if(x)x.every=iv;},EVERY[iv]+'로 바꿨어요');return;}
   if(t.dataset&&t.dataset.chg==='fixedevery'){var ev=Math.max(1,+t.value||1),fid=t.dataset.id;mut(function(){var f=S.fixed.find(function(x){return x.id===fid;});if(!f)return;f.every=ev;if(ev>1&&!fixedOn(f,W.ym)&&!f.start)f.start=W.ym;},EVERY[ev]+'로 바꿨어요');return;}
   if(t.dataset&&t.dataset.chg==='instcard'){var v=t.value,id=t.dataset.id;mut(function(){var it=S.insts.find(function(x){return x.id===id;});if(it)it.cardId=v;});}
