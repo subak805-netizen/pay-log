@@ -242,6 +242,7 @@ select.in{padding-right:24px;-webkit-appearance:none;appearance:none;background-
 .tbl tr.grp td{background:var(--row);padding-top:10px;padding-bottom:10px}
 .grph{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
 .grph b{font-size:13.5px}
+.taxaside{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 18px 8px;padding:9px 12px;border-radius:10px;background:var(--chip);font-size:13px;font-weight:700}
 .etcbox{padding:10px 18px 12px;border-top:1px solid var(--line)}
 .jump{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:12px}
 #sec-loan,#sec-lend,#sec-debt,#sec-settle,#sec-tax,#sec-taxcal{scroll-margin-top:calc(env(safe-area-inset-top,0px) + 74px)}
@@ -394,7 +395,7 @@ select.in{padding-right:24px;-webkit-appearance:none;appearance:none;background-
 
 <script>
 'use strict';
-var APP_VER='2026.10.18q';
+var APP_VER='2026.10.18r';
 var TABS=['dash','month','income','loan','fixed','card','inst','settle','save','tax'];
 var TAB_NAME={dash:'재정 한눈에',month:'이번 달',income:'수입',loan:'대출',fixed:'고정지출',card:'카드값',inst:'할부',settle:'정산 · 주고받을 돈',save:'저축 · 투자',tax:'세금'};
 var METHOD={equal:'매달 같은 금액',prin:'원금 똑같이',bullet:'이자만, 끝에 원금'};
@@ -617,11 +618,11 @@ function stockHold(s){
 /* 이번 달에 모인 돈: 넣는 날이 지난 것만 모음으로 침(체크 없음, 날짜 기준) */
 function monthSaves(ym){
   var rows=[],plan=0,got=0,out=0,m=mo(ym);
-  S.saves.forEach(function(s){var lab=s.kind==='tax'?'세금':s.kind==='save'?'저축':'투자';
+  var taxThis=0;S.saves.forEach(function(s){if(s.kind==='tax'){if(saveOn(s,ym))taxThis+=saveAmt(s,ym);return;}var lab=s.kind==='save'?'저축':'투자';
     if(saveOn(s,ym)){var a=saveAmt(s,ym),dn=passed(ym,+s.day||1);plan+=a;if(dn)got+=a;rows.push({name:s.kind==='tax'?s.name+' ('+(+s.rate||0)+'%)':s.name,lab:lab,day:+s.day||1,amt:a,done:dn});}
     ((m.sav||{})[s.id]||[]).forEach(function(e){var a=+e.amt||0,dn=passed(ym,+e.d||1);if(a>0){plan+=a;if(dn)got+=a;}else if(dn)out+=-a;rows.push({name:s.name+(e.memo?' ('+e.memo+')':''),lab:a>0?'한 번 넣기':'뺌',day:+e.d||1,amt:a,done:dn});});});
   rows.sort(function(a,b){return a.day-b.day;});
-  return {rows:rows,plan:plan,got:got,out:out,net:got-out};
+  return {rows:rows,plan:plan,got:got,out:out,net:got-out,tax:taxThis};
 }
 function saveState(s,ym){
   var put=+s.base||0,thisMonthly=0,thisExtra=0,m=s.start||ym,g=0;
@@ -770,10 +771,11 @@ function vMonth(){
     +srcOrder.map(function(k){var v=bySrc[k];return '<tr class="'+(v.l?'':'done')+'"><td class="nm">'+(k?esc(k):'<span class="t3">적지 않음</span>')+'</td><td class="r">'+won(v.t)+'</td><td class="r amt">'+won(v.l)+'</td></tr>';}).join('')
     +'</tbody></table></div></div>':'';
   var inc=inPanel(ym,ins),taxP=taxAlertPanel(ym);
-  var ms=monthSaves(ym),allSaved=S.saves.reduce(function(a,s){return a+saveState(s,ym).value;},0),spct=ms.plan?Math.round(ms.got/ms.plan*100):0;
-  var savP='<div class="panel"><div class="ph"><span class="t">'+mLabel(ym)+' 모은 돈</span><span class="small t3">저축 · 투자 · 세금</span></div>'
+  var ms=monthSaves(ym),allSaved=S.saves.reduce(function(a,s){return a+(s.kind==='tax'?0:saveState(s,ym).value);},0),taxSaved=S.saves.reduce(function(a,s){return a+(s.kind==='tax'?saveState(s,ym).value:0);},0),spct=ms.plan?Math.round(ms.got/ms.plan*100):0;
+  var savP='<div class="panel"><div class="ph"><span class="t">'+mLabel(ym)+' 모은 돈</span><span class="small t3">저축 · 투자 (세금 빼고)</span></div>'
     +(S.saves.length?'<div class="savnow"><div class="big '+(ms.net>=0?'plus':'minus')+'">'+(ms.net>=0?'+':'-')+won(Math.abs(ms.net))+'원</div><div class="s">넣을 돈 '+won(ms.plan)+'원 중 '+won(ms.got)+'원 모음'+(ms.out?' · 뺀 돈 '+won(ms.out)+'원':'')+'</div><div class="bar"><i style="width:'+spct+'%"></i></div></div>'
       +(ms.rows.length?'<div class="tw"><table class="tbl"><tbody>'+ms.rows.map(function(r){var st=r.done?(r.amt<0?['gray','뺌']:['ok','모음']):statusOf(ym,r.day);return '<tr class="'+(r.done?'':'')+'"><td class="t2 nw">'+dayLabel(r.day)+'</td><td class="c-name"><div class="nm">'+esc(r.name)+'</div><div class="sb">'+esc(r.lab)+'</div></td><td class="r amt '+(r.amt<0?'minus':'')+'">'+(r.amt<0?'-':'')+won(Math.abs(r.amt))+'</td><td class="r">'+badge(st)+'</td></tr>';}).join('')+'</tbody></table></div>':'')
+      +(taxSaved||ms.tax?'<p class="hint" style="padding-top:6px">세금으로 따로 모은 돈 '+won(taxSaved)+'원'+(ms.tax?' (이번 달 '+won(ms.tax)+'원)':'')+'은 모은 돈에 안 넣어요.</p>':'')
       +'<div class="savfoot"><span>지금까지 모은 돈 전체 <b>'+won(allSaved)+'원</b></span><button type="button" class="btn sm" data-act="tab" data-tab="save">저축 · 투자 보기</button></div>'
     :'<div class="empty small">적금·청약·투자·세금 모으기를 적으면 이번 달에 얼마 모였는지 보여줘요<div class="chips"><button type="button" class="btn sm" data-act="tab" data-tab="save">저축 · 투자 적기</button></div></div>')+'</div>';
   return h+'<div class="grid2"><div class="col">'+checklist+'</div><div class="col">'+where+savP+srcP+inc+taxP+'</div></div>';
@@ -1040,12 +1042,12 @@ var SAVE_COL=['#1C1C1F','#0E9E72','#C9A15A','#8A8D93','#7FC8A9','#8A5A14','#5E61
 function signWon(n){return (n>=0?'+':'-')+won(Math.abs(n));}
 function vSave(){
   var ym=W.ym,totV=0,totP=0,sv=0,iv=0,ip=0,thisIn=0,parts=[];
-  var tv=0;var states=S.saves.map(function(s){var st=saveState(s,ym);if(s.kind==='tax'){tv+=st.value;totV+=st.value;totP+=st.put;if(st.value>0)parts.push({n:s.name+' '+(+s.rate||0)+'%',v:st.value});return {s:s,st:st};}totV+=st.value;totP+=st.put;if(s.kind==='save')sv+=st.value;else{iv+=st.value;ip+=st.put;}thisIn+=st.thisMonthly+Math.max(0,st.thisExtra);
+  var tv=0;var states=S.saves.map(function(s){var st=saveState(s,ym);if(s.kind==='tax'){tv+=st.value;return {s:s,st:st};}totV+=st.value;totP+=st.put;if(s.kind==='save')sv+=st.value;else{iv+=st.value;ip+=st.put;}thisIn+=st.thisMonthly+Math.max(0,st.thisExtra);
     if(s.kind==='stock'){st.hold.forEach(function(x){if(x.val>0)parts.push({n:s.name+' · '+x.name,v:x.val});});if(st.cash>0)parts.push({n:s.name+' · 현금',v:st.cash});}
     else if(st.value>0)parts.push({n:s.name,v:st.value});
     return {s:s,st:st};});
   var h='<div class="stats">'+stat(mLabel(ym)+' 기준 모은 돈',won(totV)+'원','넣은 돈 '+won(totP)+' · 늘어난 돈 '+signWon(totV-totP),'dark')
-    +stat(tv?'저축 (세금 포함)':'저축',won(sv+tv)+'원',states.filter(function(x){return x.s.kind==='save';}).length+'개'+(tv?' · 세금 '+won(tv)+'원':''),'','ok')
+    +stat('저축',won(sv)+'원',states.filter(function(x){return x.s.kind==='save';}).length+'개'+(tv?' · 세금 '+won(tv)+'원은 따로':''),'','ok')
     +stat('투자 평가',won(iv)+'원',ip?'수익 '+signWon(iv-ip)+' ('+(ip?(Math.round((iv-ip)/ip*1000)/10):0)+'%)':'',' ',iv-ip>=0?'':'red')
     +(function(){var ms=monthSaves(ym);return stat(mLabel(ym)+'에 모인 돈',(ms.net>=0?'':'-')+won(Math.abs(ms.net))+'원','넣을 돈 '+won(ms.plan)+'원 중'+(ms.out?' · 뺀 돈 '+won(ms.out):''),'','ok');})()+'</div>';
   var bar='';
@@ -1063,7 +1065,7 @@ function vSave(){
   var taxRows=states.filter(function(x){return x.s.kind==='tax';});
   var taxMini=taxRows.length?'<div class="panel" style="margin-bottom:14px"><div class="ph"><span class="t">세금 모으기</span><button type="button" class="btn sm" data-act="gotojump" data-tab="tax" data-to="sec-tax">세금 탭에서 관리</button></div><div class="tw"><table class="tbl"><thead><tr><th>이름</th><th class="r">'+mLabel(ym)+'</th><th class="r">모은 돈</th></tr></thead><tbody>'
     +taxRows.map(function(x){var s=x.s,st=x.st;return '<tr><td class="c-name"><span class="nm">'+esc(s.name)+'</span><div class="sb">수입의 '+esc(s.rate)+'% · '+dayLabel(+s.day||1)+'</div></td><td class="r">'+won(st.thisMonthly)+'<div class="small t3">'+(passed(ym,+s.day||1)?'모음':statusOf(ym,+s.day||1)[1])+'</div></td><td class="r amt">'+won(st.value)+'</td></tr>';}).join('')
-    +'</tbody></table></div><p class="hint">세금 모은 돈도 모은 돈 합계에 들어가요. % 바꾸기·세금 낸 거 빼기는 세금 탭에서 해요.</p></div>':'';
+    +'</tbody></table></div><p class="hint">세금으로 쓸 돈이라 모은 돈 합계에는 안 넣어요. % 바꾸기·세금 낸 거 빼기는 세금 탭에서 해요.</p></div>':'';
   var savePanel='<div class="panel" style="margin-bottom:14px"><div class="ph"><span class="t">저축 통장</span><span class="small t3">적금 · 청약 · 비상금</span></div>'
     +(saveRows?'<div class="tw"><table class="tbl"><thead><tr><th>이름</th><th class="r">매달</th><th class="hm">넣는 날</th><th class="hm">만기</th><th class="r">모은 돈</th><th></th></tr></thead><tbody>'+saveRows+'</tbody></table></div>':'<div class="empty small">적금, 청약, 비상금 통장처럼 모으는 돈을 적어주세요</div>')+'</div>';
   var invPanels=states.filter(function(x){return x.s.kind==='invest'||x.s.kind==='stock';}).map(function(x){var s=x.s,st=x.st,sp='saves|'+s.id+'|';
@@ -1211,14 +1213,14 @@ function vTax(){
    남은 빚 = 대출 남은 원금(꺼둔 대출도 빌린 돈 그대로) + 할부 남은 돈 + 줄 돈 남은 것. 순자산 = 가진 돈 − 남은 빚 */
 function finAt(ym){
   var A=[],D=[];
-  S.saves.forEach(function(s){var st=saveState(s,ym);if(st.value)A.push({k:s.kind,name:s.kind==='tax'?s.name+' '+(+s.rate||0)+'%':s.name,v:st.value});});
+  var tax=0;S.saves.forEach(function(s){var st=saveState(s,ym);if(s.kind==='tax'){tax+=st.value;return;}if(st.value)A.push({k:s.kind,name:s.name,v:st.value});});
   S.lends.forEach(function(l){var st=lendAt(l,ym);if(!st.open&&st.rem>0)A.push({k:'lend',name:l.who+'한테 받을 돈',v:st.rem});});
   S.assets.forEach(function(x){if(+x.v>0)A.push({k:'etc',name:x.name,v:+x.v});});
   S.loans.forEach(function(L){var st=loanState(L,ym);if(st.bal>0)D.push({k:'loan',name:L.name,v:st.bal,end:L.off?null:st.end,total:+L.P||0,off:!!L.off});});
   S.insts.forEach(function(it){var st=instAt(it,ym);if(st.left>0)D.push({k:'inst',name:it.name,v:st.left,end:st.end,total:+it.total||0});});
   S.debts.forEach(function(d){var st=debtState(d,ym),left=Math.max(0,st.left);if(left>0)D.push({k:'debt',name:(d.who||S.partner.name)+'한테 줄 돈',v:left,end:st.end,total:+d.amt||0});});
   var a=A.reduce(function(x,y){return x+y.v;},0),d=D.reduce(function(x,y){return x+y.v;},0);
-  return {A:A,D:D,assets:a,debts:d,net:a-d};
+  return {A:A,D:D,assets:a,debts:d,net:a-d,tax:tax};
 }
 function netChart(ym){
   var pts=[];for(var i=-5;i<=6;i++){var m=ymAdd(ym,i);pts.push({m:m,v:finAt(m).net,fut:ymDiff(CUR,m)>0,cur:m===ym});}
@@ -1238,13 +1240,13 @@ function vDash(){
   var ym=W.ym;if(!hasData())return welcome();
   var F=finAt(ym),ins=inRows(ym),outs=outRows(ym).filter(function(r){return !r.excl;});
   var inT=ins.reduce(function(a,r){return a+r.amt;},0),outT=outs.reduce(function(a,r){return a+r.amt;},0);
-  var toSave=outs.filter(function(r){return r.kind==='save';}).reduce(function(a,r){return a+r.amt;},0),spend=outT-toSave,left=inT-outT;
-  var taxV=F.A.filter(function(x){return x.k==='tax';}).reduce(function(a,x){return a+x.v;},0);
+  var toSave=outs.filter(function(r){return r.kind==='save'&&r.cat!=='세금';}).reduce(function(a,r){return a+r.amt;},0),toTax=outs.filter(function(r){return r.kind==='save'&&r.cat==='세금';}).reduce(function(a,r){return a+r.amt;},0),spend=outT-toSave-toTax,left=inT-outT;
+  var taxV=F.tax;
   var allEnd=null;F.D.forEach(function(d){if(d.end&&(!allEnd||ymDiff(allEnd,d.end)>0))allEnd=d.end;});
   var offLoan=F.D.some(function(d){return d.off;});
   var h='<div class="stats">'
     +'<div class="stat dark"><div class="k">'+mLabel(ym)+' 순자산</div><div class="v '+(F.net>=0?'ok':'red')+'">'+(F.net<0?'-':'')+won(Math.abs(F.net))+'원</div><div class="s">가진 돈 − 남은 빚</div></div>'
-    +stat('가진 돈',won(F.assets)+'원',taxV?'세금으로 쓸 돈 '+won(taxV)+'원 포함':'저축 · 투자 · 받을 돈','','ok')
+    +stat('가진 돈',won(F.assets)+'원',taxV?'세금으로 쓸 돈 '+won(taxV)+'원은 뺌':'저축 · 투자 · 받을 돈','','ok')
     +stat('남은 빚',won(F.debts)+'원',F.debts?(allEnd?'다 갚는 달 '+ymShort(allEnd)+(offLoan?' (꺼둔 대출 빼고)':''):'갚는 일정 없음'):'빚 없음','','red')
     +stat(mLabel(ym)+' 남는 돈',(left<0?'-':'+')+won(Math.abs(left))+'원','들어오는 돈 − 나가는 돈','',left>=0?'ok':'red')+'</div>';
   var row=function(x,max,cls,sub){return '<div class="drow"><div class="dl"><span class="nm">'+esc(x.name)+'</span>'+(sub?'<span class="small t3">'+sub+'</span>':'')+'</div><div class="dbar '+cls+'"><i style="width:'+(max?Math.max(2,Math.round(x.v/max*100)):0)+'%"></i></div><div class="dv">'+won(x.v)+'</div></div>';};
@@ -1252,6 +1254,7 @@ function vDash(){
   var aMax=Math.max.apply(null,F.A.map(function(x){return x.v;}).concat([1]));
   var aP='<div class="panel"><div class="ph"><span class="t">가진 돈</span><span class="small t3">'+won(F.assets)+'원</span></div>'
     +(F.A.length?'<div class="dlist">'+F.A.sort(function(a,b){return b.v-a.v;}).map(function(x){return row(x,aMax,'ok',KL[x.k]||'');}).join('')+'</div>':'<div class="empty small">저축·투자·받을 돈을 적으면 여기에 모여요</div>')
+    +(taxV?'<div class="taxaside"><span>세금으로 쓸 돈 <span class="small t3">모은 돈에서 뺌</span></span><button type="button" class="lnk2" data-act="tab" data-tab="tax">'+won(taxV)+'원</button></div>':'')
     +'<div class="etcbox"><div class="small t2" style="font-weight:700;margin-bottom:6px">다른 자산 (전세보증금 · 차 등)</div>'
       +(S.assets.length?'<div class="tw"><table class="tbl"><tbody>'+S.assets.map(function(x){var sp='assets|'+x.id+'|';return '<tr>'+ed(sp+'name|text',x.name,'<span class="nm">'+esc(x.name)+'</span>','c-name','이름')+ed(sp+'v|num',x.v,won(x.v),'r amt','금액')+'<td class="r">'+del('assets',x.id,x.name)+'</td></tr>';}).join('')+'</tbody></table></div>':'')
       +'<form class="addf" data-form="asset" style="padding:8px 0 0;border:none;background:none"><input class="in w-name" name="name" placeholder="이름 (예: 전세보증금)" autocomplete="off"><input class="in w-amt" name="v" placeholder="금액" inputmode="numeric" autocomplete="off"><button class="btn save sm" type="submit">추가</button></form>'
@@ -1267,9 +1270,10 @@ function vDash(){
     +'<tr><td class="nm">들어오는 돈</td><td class="r amt plus">+'+won(inT)+'</td></tr>'
     +'<tr><td class="nm">나가는 돈</td><td class="r amt minus">-'+won(outT)+'</td></tr>'
     +'<tr class="off"><td>　그중 쓰는 돈 (고정지출·카드·대출 등)</td><td class="r">'+won(spend)+'</td></tr>'
-    +'<tr class="off"><td>　그중 모으는 돈 (저축·투자·세금)</td><td class="r">'+won(toSave)+'</td></tr>'
+    +'<tr class="off"><td>　그중 모으는 돈 (저축·투자)</td><td class="r">'+won(toSave)+'</td></tr>'
+    +(toTax?'<tr class="off"><td>　그중 세금으로 떼는 돈</td><td class="r">'+won(toTax)+'</td></tr>':'')
     +'<tr class="sum"><td>남는 돈</td><td class="r '+(left>=0?'plus':'minus')+'">'+(left<0?'-':'+')+won(Math.abs(left))+'원</td></tr>'
-    +'</tbody></table></div><p class="hint">모으는 돈은 나가는 돈에 들어 있지만 사라지는 돈이 아니라 가진 돈으로 쌓여요.</p></div>';
+    +'</tbody></table></div><p class="hint">모으는 돈은 나가는 돈에 들어 있지만 가진 돈으로 쌓여요. 세금으로 떼는 돈은 세금 낼 때 쓸 돈이라 가진 돈에 안 넣어요.</p></div>';
   var chart='<div class="panel"><div class="ph"><span class="t">순자산 흐름</span><span class="small t3">지난 5달 · 앞으로 6달(흐린 막대 = 지금 계획대로 갔을 때)</span></div><div class="chartwrap">'+netChart(ym)+'</div></div>';
   return h+'<div class="grid2 even"><div class="col">'+aP+'</div><div class="col">'+flow+'</div></div><div style="margin-top:14px">'+chart+'</div><div style="margin-top:14px">'+dP+'</div>';
 }
