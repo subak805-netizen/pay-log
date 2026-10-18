@@ -351,7 +351,7 @@ select.in{padding-right:24px;-webkit-appearance:none;appearance:none;background-
 
 <script>
 'use strict';
-var APP_VER='2026.10.18c';
+var APP_VER='2026.10.18d';
 var TABS=['month','loan','fixed','card','inst','settle'];
 var TAB_NAME={month:'이번 달',loan:'대출 · 받을 돈',fixed:'고정지출 · 수입 · 세금',card:'카드값',inst:'할부',settle:'정산'};
 var METHOD={equal:'매달 같은 금액',prin:'원금 똑같이',bullet:'이자만, 끝에 원금'};
@@ -446,7 +446,7 @@ function sched(L){
   return (schedCache[key]=rows);
 }
 function loanState(L,ym){
-  var rows=sched(L),n=rows.length,k=ymDiff(L.start,ym)+1,inRange=k>=1&&k<=n;
+  var rows=sched(L),n=rows.length,k=L.off?0:ymDiff(L.start,ym)+1,inRange=k>=1&&k<=n;
   var paidThis=inRange&&passed(ym,+L.day||1);
   var done=k<1?0:k>n?n:(k-1+(paidThis?1:0));
   var bal=done?rows[done-1].bal:(+L.P||0),intPaid=0,intAll=0;
@@ -673,21 +673,22 @@ function loanFormHTML(){
    +'<div class="f"><label for="lf-day">매달 내는 날</label><input class="in" id="lf-day" name="day" placeholder="25" autocomplete="off"></div>'
    +'<div class="f"><label for="lf-start">첫 상환 달</label><input class="in" id="lf-start" name="start" placeholder="'+W.ym+'" value="'+W.ym+'" autocomplete="off"></div>'
    +'<div class="f wide"><label for="lf-method">내는 방식</label><select class="in" id="lf-method" name="method"><option value="equal">매달 같은 금액 (원리금균등)</option><option value="prin">원금 똑같이 (원금균등)</option><option value="bullet">이자만 내다 끝에 원금 (만기일시)</option></select></div>'
-   +'<div class="f wide" style="justify-content:flex-end"><label class="ck"><input type="checkbox" name="viaFixed"> 원금·이자를 고정지출에 따로 적어요 (합계에 두 번 안 넣기)</label></div>'
+   +'<div class="f wide" style="justify-content:flex-end"><label class="ck"><input type="checkbox" name="off"> 아직 상환 시작 안 함 (꺼두기)</label><label class="ck"><input type="checkbox" name="viaFixed"> 원금·이자를 고정지출에 따로 적어요 (합계에 두 번 안 넣기)</label></div>'
    +'<div class="acts"><button type="button" class="btn" data-act="loanform">취소</button><button type="submit" class="btn save">추가</button></div>'
    +'</div></form></div>';
 }
 function vLoan(){
   var Ls=S.loans;if(!W.loanSel||!Ls.some(function(x){return x.id===W.loanSel;}))W.loanSel=Ls[0]?Ls[0].id:null;
-  var h='<div class="chips" style="margin-bottom:14px">'+Ls.map(function(L){return '<button type="button" class="btn sm '+(L.id===W.loanSel?'on':'')+'" data-act="loansel" data-id="'+esc(L.id)+'">'+esc(L.name)+'</button>';}).join('')
+  var h='<div class="chips" style="margin-bottom:14px">'+Ls.map(function(L){return '<button type="button" class="btn sm '+(L.id===W.loanSel?'on':'')+'" data-act="loansel" data-id="'+esc(L.id)+'">'+esc(L.name)+(L.off?' · 꺼둠':'')+'</button>';}).join('')
     +'<button type="button" class="btn sm" data-act="loanform">'+(W.loanForm?'추가 닫기':'+ 대출 추가')+'</button></div>';
   if(W.loanForm)h+=loanFormHTML();
   var L=Ls.find(function(x){return x.id===W.loanSel;});
   if(L){
     var s=loanState(L,W.ym),id=L.id,P=+L.P||0,pct=P?Math.round((P-s.bal)/P*100):0;
+    if(L.off)h+='<div class="demo-bar"><span>상환 시작 전이라 꺼둔 대출이에요. 이번 달 나가는 돈과 합계에 안 들어가요.</span><button type="button" class="btn sm" data-act="loanoff" data-id="'+esc(id)+'" data-v="0">상환 시작 · 켜기</button></div>';
     h+='<div class="stats">'
       +'<div class="stat dark"><div class="k">남은 원금</div><div class="v">'+won(s.bal)+'원</div><div class="bar"><i style="width:'+pct+'%"></i></div><div class="s">'+won(P)+'원 중 '+pct+'% 갚음</div></div>'
-      +stat(mLabel(W.ym)+'에 낼 돈',s.inRange?won(s.row.pay)+'원':'없음',s.inRange?'원금 '+won(s.row.prin)+' · 이자 '+won(s.row.int):(s.k<1?'아직 시작 전':'다 갚았어요'),'',s.inRange?'':'txt')
+      +stat(mLabel(W.ym)+'에 낼 돈',s.inRange?won(s.row.pay)+'원':'없음',s.inRange?'원금 '+won(s.row.prin)+' · 이자 '+won(s.row.int):(L.off?'꺼둠 · 상환 시작 전':s.k<1?'아직 시작 전':'다 갚았어요'),'',s.inRange?'':'txt')
       +stat('다 갚는 달',ymLabel(s.end),'남은 '+(s.n-s.done)+'회','','txt')
       +stat('앞으로 낼 이자',won(s.intLeft)+'원','지금까지 낸 이자 '+won(s.intPaid)+'원','','red')
       +'</div>';
@@ -703,6 +704,7 @@ function vLoan(){
       +'<tr><th>매달 내는 날</th>'+ed(sp+'day|day',dayRaw(+L.day||1),dayLabel(+L.day||1))+'</tr>'
       +'<tr><th>첫 상환 달</th>'+ed(sp+'start|ym',L.start,ymLabel(L.start))+'</tr>'
       +'<tr><th>내는 방식</th><td><div class="chips">'+methods+'</div></td></tr>'
+      +'<tr><th>상환</th><td><div class="chips"><button type="button" class="btn sm '+(L.off?'':'on')+'" data-act="loanoff" data-id="'+esc(id)+'" data-v="0">상환 중</button><button type="button" class="btn sm '+(L.off?'on':'')+'" data-act="loanoff" data-id="'+esc(id)+'" data-v="1">아직 시작 안 함 · 꺼두기</button></div><div class="small t3" style="font-weight:500;margin-top:5px">'+(L.off?'켤 때 첫 상환 달이 맞는지 확인해 주세요.':'아직 갚기 시작하지 않은 대출은 꺼두면 합계에서 빠져요.')+'</div></td></tr>'
       +'<tr><th>이번 달 합계</th><td><div class="chips"><button type="button" class="btn sm '+(L.viaFixed?'':'on')+'" data-act="viafixed" data-id="'+esc(id)+'" data-v="0">여기서 넣기</button><button type="button" class="btn sm '+(L.viaFixed?'on':'')+'" data-act="viafixed" data-id="'+esc(id)+'" data-v="1">고정지출에 따로 적음</button></div><div class="small t3" style="font-weight:500;margin-top:5px">'+(L.viaFixed?'이번 달 합계에는 고정지출에 적은 원금·이자만 들어가요. 여기선 남은 돈·다 갚는 날만 봐요.':'고정지출에도 원금·이자를 적는다면 「고정지출에 따로 적음」을 골라야 두 번 안 세요.')+'</div></td></tr>'
       +'</tbody></table><p class="hint">칸을 누르면 바로 고칠 수 있어요. 고치면 일정표가 바로 다시 계산돼요. 내는 날이 지나면 낸 걸로 계산해요.</p></div>';
     var rows=s.rows,from=0,to=rows.length;
@@ -1032,7 +1034,7 @@ function addFrom(kind,f){
     mut(function(){mw(ym).once.push({id:id,name:g('name'),cat:kind==='tax'?'세금':'이번 달만',day:d,amt:a,from:g('from')});},'"'+g('name')+'" 이번 달 나가는 돈에 넣었어요');if(kind==='tax')after='once';}
   else if(kind==='loan'){if(!req(f,['name','P','rate','n','day']))return;var P=num(g('P')),rate=parseFloat(g('rate').replace(/[^\d.]/g,'')),n=num(g('n')),dd=parseDay(g('day')),st=parseYm(g('start')||ym);
     if(isNaN(P)||P<1||isNaN(rate)||isNaN(n)||n<1||isNaN(dd))return bad();if(!st)return bad('첫 상환 달을 2026-03처럼 적어주세요');
-    mut(function(){S.loans.push({id:id,name:g('name'),bank:g('bank'),P:P,rate:rate,n:n,day:dd,start:st,method:g('method')||'equal',viaFixed:!!(f.elements.viaFixed&&f.elements.viaFixed.checked)});W.loanSel=id;W.loanForm=false;},'"'+g('name')+'" 대출을 추가했어요');after=null;}
+    mut(function(){S.loans.push({id:id,name:g('name'),bank:g('bank'),P:P,rate:rate,n:n,day:dd,start:st,method:g('method')||'equal',viaFixed:!!(f.elements.viaFixed&&f.elements.viaFixed.checked),off:!!(f.elements.off&&f.elements.off.checked)});W.loanSel=id;W.loanForm=false;},'"'+g('name')+'" 대출을 추가했어요');after=null;}
   else if(kind==='lend'){if(!req(f,['who','per','day']))return;var la=g('amt')?num(g('amt')):0,lp=num(g('per')),ld=parseDay(g('day')),pre=g('pre')?num(g('pre')):0;if(isNaN(la)||isNaN(lp)||lp<1||isNaN(ld)||isNaN(pre))return bad();
     mut(function(){S.lends.push({id:id,who:g('who'),amt:la,per:lp,day:ld,start:ym,pre:pre});},g('who')+'한테 받을 돈을 적었어요'+(la?'':' · 매달 계속'));}
   else if(kind==='card'){var ctype=g('type')==='check'?'check':'credit';if(!req(f,ctype==='check'?['name']:['name','day']))return;var cd=ctype==='check'?(g('day')?parseDay(g('day')):1):parseDay(g('day'));if(isNaN(cd))return bad('결제일은 1~31로 적어주세요');
@@ -1236,6 +1238,7 @@ document.addEventListener('click',function(e){
       case 'cyes':runConfirm();break;
       case 'cno':W.confirm=null;renderSheet();break;
       case 'cardtype':mut(function(){var c=S.cards.find(function(x){return x.id===d.id;});if(c)c.type=isChk(c)?'credit':'check';},'카드 종류를 바꿨어요');break;
+      case 'loanoff':mut(function(){var L=S.loans.find(function(x){return x.id===d.id;});if(L)L.off=d.v==='1';},d.v==='1'?'대출을 꺼뒀어요 · 합계에서 빠져요':'대출을 켰어요 · 첫 상환 달을 확인해 주세요');break;
       case 'viafixed':mut(function(){var L=S.loans.find(function(x){return x.id===d.id;});if(L)L.viaFixed=d.v==='1';},d.v==='1'?'이번 달 합계엔 고정지출 쪽만 넣을게요':'이번 달 합계에 대출 상환을 넣을게요');break;
       case 'glogin':loginGoogle();break;
       case 'emailform':W.sheet=true;W.emailForm=true;renderSheet();var em=document.getElementById('lgEmail');if(em)em.focus();break;
